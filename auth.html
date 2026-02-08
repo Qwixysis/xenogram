@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Xenogram - Вход</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .auth-container {
+            display: flex; align-items: center; justify-content: center; height: 100vh;
+            background: radial-gradient(circle, #2c2f33 0%, #1e1e1e 100%);
+        }
+        .auth-card {
+            background: var(--bg-side); padding: 40px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 350px; text-align: center;
+        }
+        .auth-card h2 { margin-bottom: 20px; color: var(--accent-alt); }
+        .auth-card input {
+            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 5px;
+            border: none; background: #40444b; color: white; box-sizing: border-box;
+        }
+        .auth-btn {
+            width: 100%; padding: 12px; border: none; border-radius: 5px;
+            background: var(--grad); color: white; cursor: pointer; font-weight: bold;
+        }
+        .auth-card p { font-size: 14px; margin-top: 15px; color: var(--text-dim); }
+        .link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2 id="auth-title">С возвращением!</h2>
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-pass" placeholder="Пароль">
+            <input type="text" id="auth-nick" placeholder="Никнейм (для регистрации)" style="display: none;">
+            <button class="auth-btn" id="auth-action-btn">Войти</button>
+            <p id="toggle-text">Нет аккаунта? <span class="link" id="auth-toggle">Зарегистрироваться</span></p>
+        </div>
+    </div>
+    <script type="module" src="js/auth.js"></script>
+</body>
+</html>
