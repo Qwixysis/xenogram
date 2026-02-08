@@ -25,56 +25,56 @@
         .list-header { padding: 20px; font-weight: bold; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; min-height: 70px; box-sizing: border-box; }
         #friends-container { overflow-y: auto; flex-grow: 1; }
         
+        /* Friend Item with Two Buttons */
+        .friend-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2f3136; position: relative; }
+        .friend-item:hover { background: rgba(255,255,255,0.05); }
+        .friend-name-text { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; }
+        .friend-controls { display: flex; gap: 10px; }
+        .ctrl-btn { opacity: 0.3; font-size: 18px; transition: 0.2s; padding: 4px; }
+        .friend-item:hover .ctrl-btn { opacity: 1; }
+        .ctrl-btn:hover { color: var(--accent); transform: scale(1.1); }
+
         /* Chat Window */
         .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); position: relative; z-index: 50; }
         .chat-header { padding: 10px 20px; border-bottom: 1px solid #111; background: var(--bg-side); display: flex; align-items: center; min-height: 60px; justify-content: space-between; }
-        
         #burger-menu, #mobile-back { display: none; font-size: 24px; cursor: pointer; margin-right: 15px; }
 
         /* Messages */
         #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .msg { 
-            padding: 10px 14px; border-radius: 12px; max-width: 70%; position: relative; 
-            overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; cursor: pointer;
-        }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 70%; position: relative; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; cursor: pointer; }
         .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
         .msg.theirs { align-self: flex-start; background: #32353b; border-bottom-left-radius: 2px; }
         .msg-meta { font-size: 10px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
         .msg-time { font-size: 9px; opacity: 0.5; margin-top: 4px; text-align: right; }
         .edited-tag { font-size: 8px; opacity: 0.5; margin-left: 5px; font-style: italic; }
 
-        /* Context Menu */
-        .msg-actions { display: none; position: absolute; background: #111; border-radius: 8px; overflow: hidden; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #333; }
-        .msg-actions button { display: block; width: 100%; padding: 10px 15px; border: none; background: none; color: white; cursor: pointer; text-align: left; font-size: 13px; }
-        .msg-actions button:hover { background: var(--accent); }
-
+        /* Inputs & Buttons */
         #message-form-container { padding: 20px; background: var(--bg-side); border-top: 1px solid #111; }
         #typing-indicator { font-size: 11px; color: var(--online); margin-bottom: 5px; height: 14px; opacity: 0; transition: 0.2s; }
-
-        .edit-mode-active { border: 1px solid var(--accent-alt) !important; background: #2c2f33 !important; }
-
         input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; outline: none; }
+        .edit-mode-active { border: 1px solid var(--accent-alt) !important; }
         .btn { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; background: var(--accent); }
         .btn.danger { background: var(--danger); }
 
-        /* Online/Avatars */
-        .online-badge { width: 12px; height: 12px; background: var(--online); border-radius: 50%; border: 2px solid var(--bg-side); position: absolute; bottom: 0; right: 0; }
-        .friend-item { padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2f3136; position: relative; }
-        .friend-item .info-btn { margin-left: auto; opacity: 0.3; font-size: 18px; }
-        .friend-item:hover .info-btn { opacity: 1; }
+        /* Avatars */
         .avatar-circle { width: 40px; height: 40px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; background-size: cover; background-position: center; position: relative; flex-shrink: 0; }
+        .online-badge { width: 12px; height: 12px; background: var(--online); border-radius: 50%; border: 2px solid var(--bg-side); position: absolute; bottom: 0; right: 0; }
         
         /* Modals */
         .modal { display: none; position: fixed; z-index: 3000; inset: 0; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
         .modal-content { background: var(--bg-side); width: 550px; border-radius: 12px; display: flex; overflow: hidden; height: 500px; }
         .modal-sidebar { width: 160px; background: #111; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .modal-main { flex-grow: 1; padding: 25px; overflow-y: auto; text-align: center; }
-        .modal-tab { cursor: pointer; color: var(--text-dim); padding: 8px; border-radius: 5px; text-align: left; }
+        .modal-main { flex-grow: 1; padding: 25px; overflow-y: auto; }
+        .modal-tab { cursor: pointer; color: var(--text-dim); padding: 8px; border-radius: 5px; }
         .modal-tab.active { background: #333; color: white; }
+
+        .msg-actions { display: none; position: absolute; background: #111; border-radius: 8px; overflow: hidden; z-index: 1000; border: 1px solid #333; }
+        .msg-actions button { display: block; width: 100%; padding: 10px 15px; border: none; background: none; color: white; cursor: pointer; text-align: left; }
+        .msg-actions button:hover { background: var(--accent); }
 
         @media (max-width: 768px) {
             #burger-menu { display: block; }
-            .side-nav { position: fixed; left: -80px; height: 100%; width: 80px; }
+            .side-nav { position: fixed; left: -80px; height: 100%; width: 80px; z-index: 4000; transition: 0.3s; }
             .side-nav.open { transform: translateX(80px); }
             .chat-list { width: 100%; }
             .chat-window { position: fixed; width: 100%; height: 100%; left: 100%; transition: 0.3s; z-index: 2000; }
@@ -129,33 +129,32 @@
 <div id="modal-social" class="modal">
     <div class="modal-content">
         <div class="modal-sidebar">
-            <div class="modal-tab active" id="tab-add">Поиск</div>
-            <div class="modal-tab" id="tab-req">Запросы</div>
-            <div class="modal-tab" id="tab-grp">Группа</div>
+            <div class="modal-tab active" onclick="switchSocial('add')">Поиск</div>
+            <div class="modal-tab" onclick="switchSocial('req')">Запросы</div>
+            <div class="modal-tab" onclick="switchSocial('grp')">Группа</div>
             <button class="btn" onclick="closeModals()">X</button>
         </div>
         <div class="modal-main" id="view-add">
             <input type="text" id="search-uid" placeholder="UID пользователя...">
-            <button class="btn" id="btn-send-req" style="width:100%; margin-top:10px">Отправить запрос</button>
-            <p style="font-size:10px; text-align:left">UID: <code id="my-uid-val"></code></p>
+            <button class="btn" id="btn-send-req" style="width:100%; margin-top:10px">Добавить</button>
+            <p style="font-size:10px">UID: <code id="my-uid-val"></code></p>
         </div>
         <div class="modal-main" id="view-req" style="display:none"><div id="req-list"></div></div>
         <div class="modal-main" id="view-grp" style="display:none">
             <input type="text" id="grp-name" placeholder="Имя беседы">
-            <div id="grp-friends-select" style="margin:10px 0; text-align:left"></div>
+            <div id="grp-friends-select" style="margin:10px 0;"></div>
             <button class="btn" id="btn-create-grp" style="width:100%">Создать</button>
         </div>
     </div>
 </div>
 
 <div id="modal-friend-profile" class="modal">
-    <div class="modal-content" style="height: auto; min-height: 300px; width: 400px; flex-direction: column;">
-        <div class="modal-main">
+    <div class="modal-content" style="height: auto; width: 400px; flex-direction: column;">
+        <div class="modal-main" style="text-align:center">
             <div id="friend-profile-ava" class="avatar-circle" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 30px;"></div>
             <h2 id="friend-profile-name">Имя</h2>
             <p style="font-size: 12px; color: var(--text-dim);">UID: <span id="friend-profile-uid"></span></p>
-            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-            <button class="btn danger" id="btn-unfriend" style="width: 100%;">Удалить из друзей</button>
+            <button class="btn danger" id="btn-unfriend" style="width: 100%; margin-top: 20px;">Удалить из друзей</button>
             <button class="btn" onclick="closeModals()" style="width: 100%; margin-top: 10px; background: #444;">Закрыть</button>
         </div>
     </div>
@@ -168,18 +167,6 @@
             <input type="text" id="set-nick" placeholder="Никнейм">
             <input type="text" id="set-ava" placeholder="Аватар URL">
             <button class="btn" id="btn-save-prof" style="width:100%; margin-top:10px">Сохранить</button>
-        </div>
-    </div>
-</div>
-
-<div id="modal-group-admin" class="modal">
-    <div class="modal-content">
-        <div class="modal-sidebar"><h3>Админка</h3><button class="btn" onclick="closeModals()">X</button></div>
-        <div class="modal-main">
-            <input type="text" id="edit-grp-name">
-            <div id="grp-mem-list" style="margin:10px 0; text-align:left"></div>
-            <button class="btn" id="btn-save-grp" style="width:100%">Обновить</button>
-            <button class="btn danger" id="btn-del-grp" style="width:100%; margin-top:10px">Удалить группу</button>
         </div>
     </div>
 </div>
@@ -202,19 +189,18 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentChatId = null, myNick = "", myFriends = [];
-    let selectedMsgId = null, isEditing = false;
-    let viewedFriendId = null;
+    let currentChatId = null, myNick = "", selectedMsgId = null, isEditing = false, viewedFriendId = null, unsubMsg = null, unsubTyping = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) window.location.href = "auth.html";
         else {
             await updateDoc(doc(db, "users", user.uid), { isOnline: true, lastSeen: serverTimestamp() });
             const snap = await getDoc(doc(db, "users", user.uid));
-            myNick = snap.data()?.username || "User";
+            const d = snap.data();
+            myNick = d?.username || "User";
             document.getElementById('my-uid-val').innerText = user.uid;
             document.getElementById('set-nick').value = myNick;
-            document.getElementById('set-ava').value = snap.data()?.avatar || "";
+            document.getElementById('set-ava').value = d?.avatar || "";
             initApp();
         }
     });
@@ -222,11 +208,11 @@
     function initApp() {
         onSnapshot(doc(db, "users", auth.currentUser.uid), async (snap) => {
             const data = snap.data(); if(!data) return;
-            myFriends = data.friends || [];
             const fCont = document.getElementById('friends-container');
             const cgList = document.getElementById('grp-friends-select');
             fCont.innerHTML = ""; cgList.innerHTML = "";
 
+            // Группы
             for(const gId of (data.groups || [])) {
                 const gDoc = await getDoc(doc(db, "chats", gId));
                 if(gDoc.exists()){
@@ -236,23 +222,29 @@
                     fCont.appendChild(d);
                 }
             }
-            for(const fId of myFriends) {
+
+            // Друзья
+            for(const fId of (data.friends || [])) {
                 const fDoc = await getDoc(doc(db, "users", fId));
                 if(fDoc.exists()){
                     const fd = fDoc.data();
                     const div = document.createElement('div'); div.className = 'friend-item';
                     div.innerHTML = `
                         <div class="avatar-circle" ${fd.avatar?`style="background-image:url(${fd.avatar})"`:''}>
-                            ${fd.avatar?'':fd.username[0]}
-                            ${fd.isOnline?'<div class="online-badge"></div>':''}
+                            ${fd.avatar?'':fd.username[0]}${fd.isOnline?'<div class="online-badge"></div>':''}
                         </div>
-                        <span onclick="event.stopPropagation(); startChat('${fId}', '${fd.username}', false)">${fd.username}</span>
-                        <div class="info-btn" onclick="openFriendProfile('${fId}')">ℹ️</div>
+                        <span class="friend-name-text" onclick="window.startChat('${fId}', '${fd.username}', false)">${fd.username}</span>
+                        <div class="friend-controls">
+                            <div class="ctrl-btn" title="Чат" onclick="event.stopPropagation(); window.startChat('${fId}', '${fd.username}', false)">💬</div>
+                            <div class="ctrl-btn" title="Профиль" onclick="event.stopPropagation(); window.openFriendProfile('${fId}')">ℹ️</div>
+                        </div>
                     `;
                     fCont.appendChild(div);
                     cgList.innerHTML += `<label style="display:block"><input type="checkbox" value="${fId}"> ${fd.username}</label>`;
                 }
             }
+
+            // Запросы
             const rCont = document.getElementById('req-list'); rCont.innerHTML = "";
             for(const rId of (data.requests || [])) {
                 const rDoc = await getDoc(doc(db, "users", rId));
@@ -261,33 +253,10 @@
         });
     }
 
-    window.openFriendProfile = async (id) => {
-        viewedFriendId = id;
-        const snap = await getDoc(doc(db, "users", id));
-        const data = snap.data();
-        document.getElementById('friend-profile-name').innerText = data.username;
-        document.getElementById('friend-profile-uid').innerText = id;
-        const ava = document.getElementById('friend-profile-ava');
-        ava.style.backgroundImage = data.avatar ? `url(${data.avatar})` : 'none';
-        ava.innerText = data.avatar ? '' : data.username[0];
-        document.getElementById('modal-friend-profile').style.display = 'flex';
-    };
-
-    document.getElementById('btn-unfriend').onclick = async () => {
-        if(confirm("Удалить пользователя из друзей?")){
-            const myId = auth.currentUser.uid;
-            await updateDoc(doc(db, "users", myId), { friends: arrayRemove(viewedFriendId) });
-            await updateDoc(doc(db, "users", viewedFriendId), { friends: arrayRemove(myId) });
-            closeModals();
-        }
-    };
-
-    let unsubMsg = null, unsubTyping = null;
-    function startChat(id, name, isGroup) {
+    window.startChat = (id, name, isGroup) => {
         currentChatId = isGroup ? id : [auth.currentUser.uid, id].sort().join('_');
         document.getElementById('chat-title').innerText = name;
         document.getElementById('message-input').disabled = false;
-        document.getElementById('group-info-btn').style.display = isGroup ? 'block' : 'none';
         document.getElementById('app-wrap').classList.add('chat-open');
 
         if(unsubTyping) unsubTyping();
@@ -302,18 +271,18 @@
         unsubMsg = onSnapshot(query(collection(db, "chats", currentChatId, "messages"), orderBy("createdAt", "asc")), (snap) => {
             d.innerHTML = "";
             snap.forEach(doc => {
-                const data = doc.data(); if(!data) return;
-                const isMine = data.uid === auth.currentUser.uid;
-                const time = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                const m = doc.data(); if(!m) return;
+                const mine = m.uid === auth.currentUser.uid;
+                const time = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
                 const mDiv = document.createElement('div');
-                mDiv.className = `msg ${isMine?'mine':'theirs'}`;
-                mDiv.innerHTML = `<div class="msg-meta">${data.sender}${data.edited?'<span class="edited-tag">(изм.)</span>':''}</div><div>${data.text}</div><div class="msg-time">${time}</div>`;
-                if(isMine) mDiv.onclick = (e) => showActions(e, doc.id, data.text);
+                mDiv.className = `msg ${mine?'mine':'theirs'}`;
+                mDiv.innerHTML = `<div class="msg-meta">${m.sender}${m.edited?'<span class="edited-tag">(изм.)</span>':''}</div><div>${m.text}</div><div class="msg-time">${time}</div>`;
+                if(mine) mDiv.onclick = (e) => showActions(e, doc.id, m.text);
                 d.appendChild(mDiv);
             });
             d.scrollTop = d.scrollHeight;
         });
-    }
+    };
 
     const msgInp = document.getElementById('message-input');
     msgInp.oninput = async () => {
@@ -342,7 +311,40 @@
     };
     window.hideActions = () => document.getElementById('msg-context-menu').style.display = 'none';
     window.prepEdit = () => { isEditing = true; msgInp.value = window.tempText; msgInp.classList.add('edit-mode-active'); msgInp.focus(); };
-    window.deleteMsg = async () => { if(confirm("Удалить сообщение?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId)); };
+    window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId)); };
+
+    window.switchSocial = (v) => {
+        ['add','req','grp'].forEach(id => document.getElementById('view-'+id).style.display = id===v?'block':'none');
+    };
+    window.acceptFriend = async (id) => {
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { requests: arrayRemove(id), friends: arrayUnion(id) });
+        await updateDoc(doc(db, "users", id), { friends: arrayUnion(auth.currentUser.uid) });
+    };
+    window.openFriendProfile = async (id) => {
+        viewedFriendId = id;
+        const s = await getDoc(doc(db, "users", id));
+        const d = s.data();
+        document.getElementById('friend-profile-name').innerText = d.username;
+        document.getElementById('friend-profile-uid').innerText = id;
+        const ava = document.getElementById('friend-profile-ava');
+        ava.style.backgroundImage = d.avatar ? `url(${d.avatar})` : 'none';
+        ava.innerText = d.avatar ? '' : d.username[0];
+        document.getElementById('modal-friend-profile').style.display = 'flex';
+    };
+
+    document.getElementById('btn-send-req').onclick = async () => {
+        const id = document.getElementById('search-uid').value.trim();
+        if(id) { await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); alert("Отправлено!"); }
+    };
+
+    document.getElementById('btn-create-grp').onclick = async () => {
+        const name = document.getElementById('grp-name').value;
+        const selected = Array.from(document.querySelectorAll('#grp-friends-select input:checked')).map(i => i.value);
+        if(!name || selected.length === 0) return;
+        const gRef = await addDoc(collection(db, "chats"), { groupName: name, members: [...selected, auth.currentUser.uid] });
+        for(const m of [...selected, auth.currentUser.uid]) await updateDoc(doc(db, "users", m), { groups: arrayUnion(gRef.id) });
+        closeModals();
+    };
 
     window.toggleBurger = () => {
         const open = document.getElementById('side-nav').classList.toggle('open');
@@ -352,18 +354,6 @@
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     document.getElementById('open-social').onclick = () => document.getElementById('modal-social').style.display = 'flex';
     document.getElementById('open-settings').onclick = () => document.getElementById('modal-settings').style.display = 'flex';
-    document.getElementById('btn-save-prof').onclick = async () => {
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { username: document.getElementById('set-nick').value, avatar: document.getElementById('set-ava').value });
-        alert("Профиль обновлен"); closeModals();
-    };
-    window.acceptFriend = async (id) => {
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { requests: arrayRemove(id), friends: arrayUnion(id) });
-        await updateDoc(doc(db, "users", id), { friends: arrayUnion(auth.currentUser.uid) });
-    };
-    document.getElementById('btn-send-req').onclick = async () => {
-        const id = document.getElementById('search-uid').value.trim();
-        if(id) { await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); alert("Запрос отправлен"); }
-    };
     document.getElementById('logout-btn').onclick = async () => {
         await updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }); signOut(auth);
     };
