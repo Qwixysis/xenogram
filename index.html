@@ -344,18 +344,28 @@
     };
 
     window.toggleBurger = () => {
-        const open = document.getElementById('side-nav').classList.toggle('open');
+        const sideNav = document.getElementById('side-nav');
+        const open = sideNav.classList.toggle('open');
         document.getElementById('nav-overlay').style.display = open ? 'block' : 'none';
     };
+
     document.getElementById('mobile-back').onclick = () => document.getElementById('app-wrap').classList.remove('chat-open');
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    document.getElementById('open-social').onclick = () => document.getElementById('modal-social').style.display = 'flex';
-    document.getElementById('open-settings').onclick = () => document.getElementById('modal-settings').style.display = 'flex';
+    
+    // --- Исправленные обработчики для скрытия бургер-меню ---
+    document.getElementById('open-social').onclick = () => {
+        if(document.getElementById('side-nav').classList.contains('open')) toggleBurger();
+        document.getElementById('modal-social').style.display = 'flex';
+    };
+    document.getElementById('open-settings').onclick = () => {
+        if(document.getElementById('side-nav').classList.contains('open')) toggleBurger();
+        document.getElementById('modal-settings').style.display = 'flex';
+    };
+
     document.getElementById('logout-btn').onclick = async () => {
         await updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }); signOut(auth);
     };
 
-    // --- FIX: Save Profile Button ---
     document.getElementById('btn-save-prof').onclick = async () => {
         const newNick = document.getElementById('set-nick').value.trim();
         const newAva = document.getElementById('set-ava').value.trim();
