@@ -3,136 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xenogram - Final Fixed Name</title>
+    <title>Xenogram - Advanced</title>
     <style>
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
             --accent: #7289da; --accent-alt: #9b59b6; --danger: #f04747;
             --text-main: #ffffff; --text-dim: #b9bbbe;
             --grad: linear-gradient(135deg, #7289da, #9b59b6);
+            --anim-speed: 0.3s;
         }
+
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
         .app-container { display: flex; height: 100vh; width: 100vw; }
 
-        /* Боковая навигация */
+        /* Навигация */
         .side-nav { width: 70px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 15px; flex-shrink: 0; }
-        .nav-icon { width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.2s; }
-        .nav-icon:hover { border-radius: 15px; background: var(--grad); }
+        .nav-icon { width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all var(--anim-speed) ease; }
+        .nav-icon:hover { border-radius: 15px; background: var(--grad); transform: translateY(-2px); }
 
-        /* Список чатов */
+        /* Список друзей */
         .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; }
         .list-header { padding: 20px; font-weight: bold; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
         
-        .friend-item { padding: 12px 15px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2f3136; }
+        .friend-item { 
+            padding: 12px 15px; cursor: pointer; display: flex; align-items: center; gap: 12px; 
+            border-bottom: 1px solid #2f3136; transition: background var(--anim-speed); position: relative;
+        }
         .friend-item:hover { background: #36393f; }
-        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; background: var(--grad); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-
-        /* Окно чата */
-        .chat-window { flex-grow: 1; display: flex; flex-direction: column; }
-        .chat-header { padding: 15px 20px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); }
-        #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .friend-actions { display: none; gap: 8px; position: absolute; right: 10px; }
+        .friend-item:hover .friend-actions { display: flex; }
         
-        /* Сообщения */
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 65%; position: relative; }
+        .action-btn { font-size: 14px; opacity: 0.6; transition: opacity 0.2s; cursor: pointer; }
+        .action-btn:hover { opacity: 1; }
+
+        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+
+        /* Чат */
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; }
+        #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+
+        /* Анимация появления сообщений */
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .msg { 
+            padding: 10px 14px; border-radius: 12px; max-width: 65%; position: relative; 
+            animation: slideIn 0.3s ease forwards;
+        }
         .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
         .msg.theirs { align-self: flex-start; background: #32353b; border-bottom-left-radius: 2px; }
-        .msg-sender { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: var(--accent-alt); }
-        .mine .msg-sender { color: #fff; opacity: 0.8; }
-        .msg-text { font-size: 14px; line-height: 1.4; word-wrap: break-word; }
-
-        /* Модалки */
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal-content { background: var(--bg-side); width: 550px; height: 450px; border-radius: 12px; display: flex; overflow: hidden; }
-        .modal-sidebar { width: 160px; background: #111; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .modal-main { flex-grow: 1; padding: 25px; overflow-y: auto; }
-        .modal-tab { cursor: pointer; color: var(--text-dim); padding: 10px; border-radius: 6px; font-size: 14px; }
-        .modal-tab.active { background: #333; color: white; font-weight: bold; }
         
-        input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 12px; border-radius: 6px; margin-bottom: 15px; width: 100%; box-sizing: border-box; outline: none; }
-        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
-        .btn-save { background: var(--accent); width: 100%; }
+        .msg-info { font-size: 10px; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 10px; opacity: 0.8; }
+        .msg-time { font-size: 9px; opacity: 0.6; margin-top: 4px; text-align: right; }
+        
+        .msg-tools { 
+            display: none; position: absolute; top: -25px; right: 0; 
+            background: #111; border-radius: 5px; padding: 4px 8px; gap: 10px; font-size: 12px;
+        }
+        .msg.mine:hover .msg-tools { display: flex; }
 
-        #message-form { padding: 15px 20px; background: var(--bg-main); display: flex; gap: 10px; }
-        #message-input { margin-bottom: 0; background: #40444b; border: none; }
+        /* Модалки и Профиль */
+        .profile-popover {
+            position: fixed; background: #2f3136; border-radius: 10px; padding: 15px; 
+            width: 200px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 1000;
+            display: none; flex-direction: column; align-items: center; text-align: center;
+            animation: slideIn 0.2s ease;
+        }
+
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
+        .modal-content { background: var(--bg-side); width: 500px; border-radius: 12px; overflow: hidden; animation: slideIn 0.3s ease; }
+
+        input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; outline: none; }
+        #message-form { padding: 20px; display: flex; gap: 10px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <aside class="side-nav">
-        <div class="nav-icon" title="Чаты">💬</div>
-        <div class="nav-icon" id="open-social-btn" title="Социальное">👥</div>
-        <div class="nav-icon" id="open-settings" title="Настройки">⚙️</div>
+        <div class="nav-icon">💬</div>
+        <div class="nav-icon" id="open-social">👥</div>
+        <div class="nav-icon" id="open-settings">⚙️</div>
         <div style="flex-grow: 1;"></div>
-        <div class="nav-icon" id="logout-btn" title="Выйти">🚪</div>
+        <div class="nav-icon" id="logout-btn">🚪</div>
     </aside>
 
     <section class="chat-list">
         <div class="list-header">
             <span>Xenogram</span>
-            <span style="cursor:pointer; color:var(--accent); font-size: 24px;" id="quick-add">+</span>
+            <span style="cursor:pointer; color:var(--accent)" id="add-friend-plus">+</span>
         </div>
         <div id="friends-container"></div>
     </section>
 
     <main class="chat-window">
-        <header class="chat-header">
+        <header style="padding: 15px 20px; border-bottom: 1px solid #111;">
             <h3 id="chat-title" style="margin:0">Выберите чат</h3>
-            <span id="target-uid-display" style="font-size: 10px; color: var(--text-dim)"></span>
         </header>
         <div id="messages-display"></div>
         <form id="message-form">
-            <input type="text" id="message-input" placeholder="Напишите что-нибудь..." disabled autocomplete="off">
-            <button type="submit" style="display:none"></button>
+            <input type="text" id="message-input" placeholder="Введите сообщение..." disabled autocomplete="off">
         </form>
     </main>
 </div>
 
-<div id="social-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-sidebar">
-            <h3 style="color:var(--accent)">Связь</h3>
-            <div class="modal-tab active" id="tab-add">Найти друга</div>
-            <div class="modal-tab" id="tab-pending">Запросы <span id="req-count"></span></div>
-            <div style="flex-grow: 1"></div>
-            <div class="modal-tab" id="close-social">Закрыть</div>
-        </div>
-        <div class="modal-main" id="view-add">
-            <h2>Добавить по UID</h2>
-            <input type="text" id="search-uid" placeholder="Вставьте UID...">
-            <button class="btn btn-save" id="send-req">Отправить запрос</button>
-            <p style="font-size: 11px; margin-top: 20px;">Ваш UID: <br><code id="my-uid-display" style="color:var(--accent-alt)">...</code></p>
-        </div>
-        <div class="modal-main" id="view-pending" style="display:none">
-            <h2>Входящие запросы</h2>
-            <div id="req-list"></div>
-        </div>
-    </div>
-</div>
-
-<div id="settings-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-sidebar">
-            <h3 style="color:var(--accent-alt)">Настройки</h3>
-            <div class="modal-tab active">Профиль</div>
-            <div style="flex-grow: 1"></div>
-            <div class="modal-tab" id="close-settings">Закрыть</div>
-        </div>
-        <div class="modal-main">
-            <h2>Мой профиль</h2>
-            <label style="font-size: 12px; color: var(--text-dim)">Никнейм:</label>
-            <input type="text" id="set-username" placeholder="Ваш ник">
-            <label style="font-size: 12px; color: var(--text-dim)">Аватар (URL):</label>
-            <input type="text" id="set-avatar" placeholder="https://...">
-            <button class="btn btn-save" id="save-profile">Сохранить всё</button>
-        </div>
-    </div>
+<div id="profile-card" class="profile-popover">
+    <div class="avatar-circle" id="pop-avatar" style="width:60px; height:60px; font-size:24px; margin-bottom:10px;"></div>
+    <b id="pop-name">Имя</b>
+    <p id="pop-uid" style="font-size:10px; color:var(--text-dim); word-break: break-all;"></p>
+    <button class="btn" style="background:var(--accent); font-size:12px; padding:5px 10px; border:none; border-radius:4px; color:white; cursor:pointer;" onclick="document.getElementById('profile-card').style.display='none'">Закрыть</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDqH9q3k1Ekl5KxxpBkFEm9OxgCtixshJY",
@@ -148,170 +132,117 @@
     const db = getFirestore(app);
 
     let currentChatId = null;
-    let currentUserName = "User";
+    let myName = "";
 
-    // --- АВТОРИЗАЦИЯ И ИНИЦИАЛИЗАЦИЯ ---
     onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            window.location.href = "auth.html";
-        } else {
-            document.getElementById('my-uid-display').innerText = user.uid;
-            
-            // Проверяем и создаем запись в Firestore
-            const uRef = doc(db, "users", user.uid);
-            const uSnap = await getDoc(uRef);
-            
-            if (!uSnap.exists()) {
-                const name = user.displayName || "Новый пользователь";
-                await setDoc(uRef, { username: name, friends: [], requests: [], avatar: "" });
-                currentUserName = name;
-            } else {
-                currentUserName = uSnap.data().username || "User";
-            }
-            
-            document.getElementById('set-username').value = currentUserName;
-            document.getElementById('set-avatar').value = uSnap.data()?.avatar || "";
-            
-            initAppListeners();
+        if (!user) window.location.href = "auth.html";
+        else {
+            const uSnap = await getDoc(doc(db, "users", user.uid));
+            myName = uSnap.data()?.username || "User";
+            syncData();
         }
     });
 
-    function initAppListeners() {
-        // Слушаем изменения своего профиля (друзья, ник, запросы)
+    function syncData() {
         onSnapshot(doc(db, "users", auth.currentUser.uid), async (snap) => {
             const data = snap.data();
-            if (!data) return;
-
-            currentUserName = data.username || "User";
-
-            // Отрисовка друзей
-            const friendsCont = document.getElementById('friends-container');
-            friendsCont.innerHTML = "";
+            const container = document.getElementById('friends-container');
+            container.innerHTML = "";
+            
             for (const fId of (data.friends || [])) {
                 const fDoc = await getDoc(doc(db, "users", fId));
                 if (fDoc.exists()) {
                     const fData = fDoc.data();
-                    const name = fData.username || "Друг";
                     const item = document.createElement('div');
                     item.className = 'friend-item';
-                    const ava = fData.avatar ? `style="background-image:url(${fData.avatar}); color:transparent"` : "";
-                    item.innerHTML = `<div class="avatar-circle" ${ava}>${name[0].toUpperCase()}</div> <span>${name}</span>`;
-                    item.onclick = () => startChat(fId, name);
-                    friendsCont.appendChild(item);
-                }
-            }
-
-            // Отрисовка запросов
-            const reqCont = document.getElementById('req-list');
-            const reqs = data.requests || [];
-            document.getElementById('req-count').innerText = reqs.length ? `(${reqs.length})` : "";
-            reqCont.innerHTML = "";
-            for (const rId of reqs) {
-                const rDoc = await getDoc(doc(db, "users", rId));
-                if (rDoc.exists()) {
-                    const rData = rDoc.data();
-                    const div = document.createElement('div');
-                    div.className = 'friend-item';
-                    div.style.justifyContent = "space-between";
-                    div.innerHTML = `<span>${rData.username}</span> <button class="btn btn-save" style="width:auto" onclick="acceptFriend('${rId}')">Да</button>`;
-                    reqCont.appendChild(div);
+                    item.innerHTML = `
+                        <div class="avatar-circle">${fData.username[0]}</div>
+                        <span>${fData.username}</span>
+                        <div class="friend-actions">
+                            <span class="action-btn" onclick="showProfile(event, '${fId}', '${fData.username}')">📒</span>
+                            <span class="action-btn" style="color:var(--danger)" onclick="removeFriend('${fId}')">✖</span>
+                        </div>
+                    `;
+                    item.onclick = (e) => { if(e.target.className !== 'action-btn') startChat(fId, fData.username); };
+                    container.appendChild(item);
                 }
             }
         });
     }
 
-    // --- ЧАТ ---
-    let unsubChat = null;
+    // Показ профиля
+    window.showProfile = (e, id, name) => {
+        e.stopPropagation();
+        const card = document.getElementById('profile-card');
+        card.style.display = 'flex';
+        card.style.left = e.pageX + 'px';
+        card.style.top = e.pageY + 'px';
+        document.getElementById('pop-name').innerText = name;
+        document.getElementById('pop-avatar').innerText = name[0];
+        document.getElementById('pop-uid').innerText = id;
+    };
+
+    window.removeFriend = async (id) => {
+        if(confirm("Удалить из друзей?")) {
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: arrayRemove(id) });
+            await updateDoc(doc(db, "users", id), { friends: arrayRemove(auth.currentUser.uid) });
+        }
+    };
+
     function startChat(id, name) {
         document.getElementById('chat-title').innerText = name;
         document.getElementById('message-input').disabled = false;
-        document.getElementById('target-uid-display').innerText = `ID: ${id}`;
         currentChatId = [auth.currentUser.uid, id].sort().join('_');
 
-        if (unsubChat) unsubChat();
         const q = query(collection(db, "chats", currentChatId, "messages"), orderBy("createdAt", "asc"));
-        
-        unsubChat = onSnapshot(q, (snap) => {
-            const disp = document.getElementById('messages-display');
-            disp.innerHTML = "";
-            snap.forEach(m => {
-                const d = m.data();
+        onSnapshot(q, (snap) => {
+            const display = document.getElementById('messages-display');
+            display.innerHTML = "";
+            snap.forEach(doc => {
+                const d = doc.data();
                 const isMine = d.uid === auth.currentUser.uid;
+                const time = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "...";
+                
                 const div = document.createElement('div');
                 div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
                 div.innerHTML = `
-                    <div class="msg-sender">${d.senderName || "User"}</div>
-                    <div class="msg-text">${d.text}</div>
+                    <div class="msg-info"><b>${d.sender}</b></div>
+                    <div id="text-${doc.id}">${d.text}</div>
+                    <div class="msg-time">${time} ${d.edited ? '(ред.)' : ''}</div>
+                    ${isMine ? `
+                    <div class="msg-tools">
+                        <span onclick="editMsg('${doc.id}', '${d.text.replace(/'/g, "\\'")}')">✏️</span>
+                        <span onclick="deleteMsg('${doc.id}')">🗑️</span>
+                    </div>` : ''}
                 `;
-                disp.appendChild(div);
+                display.appendChild(div);
             });
-            disp.scrollTop = disp.scrollHeight;
+            display.scrollTop = display.scrollHeight;
         });
     }
+
+    window.deleteMsg = async (id) => {
+        if(confirm("Удалить сообщение?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", id));
+    };
+
+    window.editMsg = async (id, oldText) => {
+        const newText = prompt("Редактировать:", oldText);
+        if(newText && newText !== oldText) {
+            await updateDoc(doc(db, "chats", currentChatId, "messages", id), { text: newText, edited: true });
+        }
+    };
 
     document.getElementById('message-form').onsubmit = async (e) => {
         e.preventDefault();
         const inp = document.getElementById('message-input');
-        if (!inp.value || !currentChatId) return;
-
+        if(!inp.value) return;
         await addDoc(collection(db, "chats", currentChatId, "messages"), {
             text: inp.value,
             uid: auth.currentUser.uid,
-            senderName: currentUserName, // Сохраняем актуальное имя
+            sender: myName,
             createdAt: serverTimestamp()
         });
         inp.value = "";
-    };
-
-    // --- ФУНКЦИИ ---
-    window.acceptFriend = async (fId) => {
-        const myUid = auth.currentUser.uid;
-        await updateDoc(doc(db, "users", myUid), { requests: arrayRemove(fId), friends: arrayUnion(fId) });
-        await updateDoc(doc(db, "users", fId), { friends: arrayUnion(myUid) });
-    };
-
-    document.getElementById('send-req').onclick = async () => {
-        const tid = document.getElementById('search-uid').value.trim();
-        if (!tid || tid === auth.currentUser.uid) return;
-        try {
-            await updateDoc(doc(db, "users", tid), { requests: arrayUnion(auth.currentUser.uid) });
-            alert("Запрос отправлен!");
-            document.getElementById('search-uid').value = "";
-        } catch(e) { alert("Пользователь не найден."); }
-    };
-
-    document.getElementById('save-profile').onclick = async () => {
-        const newNick = document.getElementById('set-username').value.trim();
-        const newAva = document.getElementById('set-avatar').value.trim();
-        if(!newNick) return;
-
-        await updateProfile(auth.currentUser, { displayName: newNick, photoURL: newAva });
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { username: newNick, avatar: newAva });
-        currentUserName = newNick;
-        alert("Сохранено!");
-    };
-
-    // --- УПРАВЛЕНИЕ МОДАЛКАМИ ---
-    const sMod = document.getElementById('social-modal');
-    const setMod = document.getElementById('settings-modal');
-
-    document.getElementById('open-social-btn').onclick = () => sMod.style.display = 'flex';
-    document.getElementById('quick-add').onclick = () => sMod.style.display = 'flex';
-    document.getElementById('close-social').onclick = () => sMod.style.display = 'none';
-    document.getElementById('open-settings').onclick = () => setMod.style.display = 'flex';
-    document.getElementById('close-settings').onclick = () => setMod.style.display = 'none';
-
-    document.getElementById('tab-pending').onclick = () => {
-        document.getElementById('view-add').style.display = 'none';
-        document.getElementById('view-pending').style.display = 'block';
-        document.getElementById('tab-pending').classList.add('active');
-        document.getElementById('tab-add').classList.remove('active');
-    };
-    document.getElementById('tab-add').onclick = () => {
-        document.getElementById('view-add').style.display = 'block';
-        document.getElementById('view-pending').style.display = 'none';
-        document.getElementById('tab-add').classList.add('active');
-        document.getElementById('tab-pending').classList.remove('active');
     };
 
     document.getElementById('logout-btn').onclick = () => signOut(auth);
