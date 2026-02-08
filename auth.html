@@ -2,30 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Xenogram - Вход</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xenogram - Авторизация</title>
     <style>
-        body { background: #1e1e1e; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .auth-card { background: #23272a; padding: 30px; border-radius: 12px; width: 300px; text-align: center; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #111; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; border: none; border-radius: 5px; background: #7289da; color: white; cursor: pointer; font-weight: bold; margin-top: 5px; }
-        .toggle-link { font-size: 12px; color: #b9bbbe; cursor: pointer; margin-top: 15px; display: block; }
+        body { background: #1e1e1e; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .auth-card { background: #23272a; padding: 30px; border-radius: 12px; width: 100%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #111; color: white; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #7289da; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #7289da; color: white; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        button:hover { background: #5b6eae; }
+        .toggle-link { font-size: 13px; color: #b9bbbe; cursor: pointer; margin-top: 20px; display: block; text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div class="auth-card">
     <h2 id="auth-title">Вход</h2>
-    <input type="text" id="email" placeholder="Email">
-    <input type="password" id="pass" placeholder="Пароль">
-    <input type="text" id="username" placeholder="Никнейм (для регистрации)" style="display:none">
+    <div id="inputs-container">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="pass" placeholder="Пароль">
+        <input type="text" id="username" placeholder="Ваше имя (никнейм)" style="display:none">
+    </div>
     <button id="auth-btn">Войти</button>
-    <span class="toggle-link" id="toggle-mode">Нет аккаунта? Регистрация</span>
+    <span class="toggle-link" id="toggle-mode">Ещё нет аккаунта? Регистрация</span>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDqH9q3k1Ekl5KxxpBkFEm9OxgCtixshJY",
@@ -42,38 +47,57 @@
 
     let isLogin = true;
 
-    // Редирект, если уже залогинен
+    // --- ПРЕДОХРАНИТЕЛЬ РЕДИРЕКТА ---
     onAuthStateChanged(auth, (user) => {
-        if (user) window.location.href = "chat.html"; 
+        if (user) {
+            console.log("Пользователь найден, переходим в чат...");
+            // Замени 'index.html' на имя файла, где у тебя сам чат
+            if (!window.location.pathname.includes('index.html')) {
+                window.location.href = "index.html"; 
+            }
+        }
     });
 
-    document.getElementById('toggle-mode').onclick = () => {
+    const toggleLink = document.getElementById('toggle-mode');
+    const authBtn = document.getElementById('auth-btn');
+    const userInp = document.getElementById('username');
+
+    toggleLink.onclick = () => {
         isLogin = !isLogin;
         document.getElementById('auth-title').innerText = isLogin ? "Вход" : "Регистрация";
-        document.getElementById('auth-btn').innerText = isLogin ? "Войти" : "Создать";
-        document.getElementById('username').style.display = isLogin ? "none" : "block";
-        document.getElementById('toggle-mode').innerText = isLogin ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти";
+        authBtn.innerText = isLogin ? "Войти" : "Создать аккаунт";
+        userInp.style.display = isLogin ? "none" : "block";
+        toggleLink.innerText = isLogin ? "Ещё нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти";
     };
 
-    document.getElementById('auth-btn').onclick = async () => {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('pass').value;
-        const nick = document.getElementById('username').value;
+    authBtn.onclick = async () => {
+        const email = document.getElementById('email').value.trim();
+        const pass = document.getElementById('pass').value.trim();
+        const nick = userInp.value.trim();
+
+        if (!email || !pass) return alert("Заполните поля!");
 
         try {
             if (isLogin) {
                 await signInWithEmailAndPassword(auth, email, pass);
             } else {
+                if (!nick) return alert("Введите никнейм!");
                 const res = await createUserWithEmailAndPassword(auth, email, pass);
+                // Создаем профиль в базе сразу после регистрации
                 await setDoc(doc(db, "users", res.user.uid), {
-                    username: nick || "User",
+                    username: nick,
+                    avatar: "",
                     friends: [],
                     requests: [],
                     groups: [],
-                    isOnline: true
+                    isOnline: true,
+                    lastSeen: serverTimestamp()
                 });
             }
-        } catch (e) { alert(e.message); }
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка: " + e.message);
+        }
     };
 </script>
 </body>
