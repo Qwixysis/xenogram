@@ -3,40 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <title>Xenogram - Вход</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        .auth-container {
-            display: flex; align-items: center; justify-content: center; height: 100vh;
-            background: radial-gradient(circle, #2c2f33 0%, #1e1e1e 100%);
-        }
-        .auth-card {
-            background: var(--bg-side); padding: 40px; border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 350px; text-align: center;
-        }
-        .auth-card h2 { margin-bottom: 20px; color: var(--accent-alt); }
-        .auth-card input {
-            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 5px;
-            border: none; background: #40444b; color: white; box-sizing: border-box;
-        }
-        .auth-btn {
-            width: 100%; padding: 12px; border: none; border-radius: 5px;
-            background: var(--grad); color: white; cursor: pointer; font-weight: bold;
-        }
-        .auth-card p { font-size: 14px; margin-top: 15px; color: var(--text-dim); }
-        .link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+        :root { --bg: #1e1e1e; --card: #23272a; --accent: #7289da; --grad: linear-gradient(135deg, #7289da, #9b59b6); }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .auth-card { background: var(--card); padding: 40px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: none; background: #40444b; color: white; box-sizing: border-box; outline: none; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; background: var(--grad); color: white; font-weight: bold; cursor: pointer; }
+        .toggle { margin-top: 15px; font-size: 13px; color: #b9bbbe; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <h2 id="auth-title">С возвращением!</h2>
-            <input type="email" id="auth-email" placeholder="Email">
-            <input type="password" id="auth-pass" placeholder="Пароль">
-            <input type="text" id="auth-nick" placeholder="Никнейм (для регистрации)" style="display: none;">
-            <button class="auth-btn" id="auth-action-btn">Войти</button>
-            <p id="toggle-text">Нет аккаунта? <span class="link" id="auth-toggle">Зарегистрироваться</span></p>
-        </div>
+    <div class="auth-card">
+        <h2 id="title">Регистрация</h2>
+        <input type="text" id="nick" placeholder="Ваш уникальный ник">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="pass" placeholder="Пароль">
+        <button class="btn" id="action-btn">Создать аккаунт</button>
+        <div class="toggle" id="toggle">Уже есть аккаунт? Войти</div>
     </div>
-    <script type="module" src="js/auth.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqH9q3k1Ekl5KxxpBkFEm9OxgCtixshJY",
+            authDomain: "xenogram-4a1c0.firebaseapp.com",
+            projectId: "xenogram-4a1c0",
+            storageBucket: "xenogram-4a1c0.firebasestorage.app",
+            messagingSenderId: "219275152669",
+            appId: "1:219275152669:web:ee7d63910d3a8e4ff065f4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let isLogin = false;
+        const nickInp = document.getElementById('nick');
+        const emailInp = document.getElementById('email');
+        const passInp = document.getElementById('pass');
+        const btn = document.getElementById('action-btn');
+        const toggle = document.getElementById('toggle');
+
+        toggle.onclick = () => {
+            isLogin = !isLogin;
+            document.getElementById('title').innerText = isLogin ? "Вход" : "Регистрация";
+            nickInp.style.display = isLogin ? "none" : "block";
+            btn.innerText = isLogin ? "Войти" : "Создать аккаунт";
+            toggle.innerText = isLogin ? "Нет аккаунта? Регистрация" : "Уже есть аккаунт? Войти";
+        };
+
+        btn.onclick = async () => {
+            const email = emailInp.value;
+            const pass = passInp.value;
+            const nickname = nickInp.value;
+
+            try {
+                if (isLogin) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    if (!nickname) return alert("Введите ник!");
+                    const res = await createUserWithEmailAndPassword(auth, email, pass);
+                    // Обновляем ник в Auth
+                    await updateProfile(res.user, { displayName: nickname });
+                    // Создаем запись в Firestore
+                    await setDoc(doc(db, "users", res.user.uid), {
+                        username: nickname,
+                        email: email,
+                        friends: [],
+                        requests: [],
+                        avatar: ""
+                    });
+                }
+                window.location.href = "index.html";
+            } catch (e) { alert(e.message); }
+        };
+    </script>
 </body>
 </html>
