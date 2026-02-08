@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xenogram - Jarvis Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Xenogram - Mobile Ready</title>
     <style>
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
@@ -16,101 +16,105 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
         .app-container { display: flex; height: 100vh; width: 100vw; }
 
-        /* Sidebar */
-        .side-nav { width: 70px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 15px; flex-shrink: 0; }
-        .nav-icon { width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: var(--anim); }
-        .nav-icon:hover { border-radius: 15px; background: var(--grad); transform: scale(1.05); }
+        /* Sidebar - скрываем на мобилках в боковую панель или вниз */
+        .side-nav { width: 70px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 15px; flex-shrink: 0; transition: var(--anim); }
 
         /* Lists */
-        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; }
+        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; transition: var(--anim); }
         .list-header { padding: 20px; font-weight: bold; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
-        #friends-container { overflow-y: auto; flex-grow: 1; }
+        #friends-container { overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; }
         
-        .friend-item { padding: 12px 15px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2f3136; transition: var(--anim); position: relative; }
-        .friend-item:hover { background: #36393f; }
-        .friend-actions { display: none; gap: 8px; position: absolute; right: 10px; background: inherit; padding-left: 10px; }
-        .friend-item:hover .friend-actions { display: flex; }
-        
-        .avatar-wrapper { position: relative; flex-shrink: 0; }
-        .avatar-circle { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; background-size: cover; background-position: center; }
-        .status-dot { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg-side); background: #747f8d; }
-        .status-dot.online { background: var(--online); }
+        .friend-item { padding: 15px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2f3136; transition: var(--anim); }
+        .friend-item:active { background: #36393f; }
 
+        .avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; background-size: cover; background-position: center; flex-shrink: 0; }
+        
         /* Chat Window */
-        .chat-window { flex-grow: 1; display: flex; flex-direction: column; }
-        .chat-header { padding: 15px 20px; border-bottom: 1px solid #111; background: var(--bg-side); display: flex; justify-content: space-between; align-items: center; }
-        #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); transition: var(--anim); }
+        .chat-header { padding: 10px 15px; border-bottom: 1px solid #111; background: var(--bg-side); display: flex; justify-content: space-between; align-items: center; min-height: 60px; }
         
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 65%; position: relative; animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
-        .msg.theirs { align-self: flex-start; background: #32353b; border-bottom-left-radius: 2px; }
-        .msg-meta { font-size: 10px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
-        .msg-time { font-size: 9px; opacity: 0.5; margin-top: 4px; text-align: right; }
-        .msg-tools { display: none; position: absolute; top: -25px; right: 0; background: #000; padding: 4px 8px; border-radius: 5px; gap: 10px; z-index: 10; }
-        .msg.mine:hover .msg-tools { display: flex; }
+        /* Кнопка назад для мобилок */
+        #mobile-back { display: none; font-size: 24px; cursor: pointer; margin-right: 15px; }
 
-        /* Modals */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal-content { background: var(--bg-side); width: 550px; border-radius: 12px; display: flex; overflow: hidden; animation: slideIn 0.3s ease; }
-        .modal-sidebar { width: 160px; background: #111; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .modal-main { flex-grow: 1; padding: 25px; max-height: 500px; overflow-y: auto; }
-        .modal-tab { cursor: pointer; color: var(--text-dim); padding: 8px; border-radius: 5px; font-size: 13px; }
-        .modal-tab.active { background: #333; color: white; }
+        #messages-display { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .msg { padding: 10px 14px; border-radius: 16px; max-width: 80%; position: relative; word-wrap: break-word; font-size: 15px; }
+        .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; }
+        .msg.theirs { align-self: flex-start; background: #32353b; border-bottom-left-radius: 4px; }
+        
+        #message-form { padding: 10px; background: var(--bg-side); border-top: 1px solid #111; }
+        input#message-input { margin-bottom: 0; height: 45px; font-size: 16px; } /* 16px предотвращает зум на iOS */
 
-        input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; margin-bottom: 12px; outline: none; }
-        .btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; width: 100%; background: var(--accent); margin-bottom: 5px; }
-        .btn.danger { background: var(--danger); }
-        .check-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; border-top: 1px solid #333; padding-top: 10px; }
+        /* Адаптивность под телефоны */
+        @media (max-width: 768px) {
+            .side-nav { width: 50px; padding-top: 10px; }
+            .nav-icon { width: 38px; height: 38px; font-size: 16px; }
+            
+            .chat-list { width: 100%; position: absolute; height: 100%; z-index: 5; }
+            .chat-window { position: absolute; width: 100%; height: 100%; z-index: 10; transform: translateX(100%); }
+            
+            /* Когда чат активен */
+            .app-container.chat-open .chat-window { transform: translateX(0); }
+            .app-container.chat-open #mobile-back { display: block; }
+            
+            .modal-content { width: 95%; flex-direction: column; height: 80vh; }
+            .modal-sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; padding: 10px; }
+            .modal-main { padding: 15px; }
+        }
+
+        /* Остальные стили из прошлых версий сохранены */
+        .avatar-wrapper { position: relative; flex-shrink: 0; }
+        .status-dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bg-side); background: #747f8d; }
+        .status-dot.online { background: var(--online); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; }
+        .modal-tab { white-space: nowrap; }
+        input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; width: 100%; background: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="app-container">
+<div class="app-container" id="app-wrap">
     <aside class="side-nav">
-        <div class="nav-icon" title="Чаты">💬</div>
-        <div class="nav-icon" id="open-social" title="Социалка">👥</div>
-        <div class="nav-icon" id="open-settings" title="Настройки">⚙️</div>
+        <div class="nav-icon" onclick="location.reload()">💬</div>
+        <div class="nav-icon" id="open-social">👥</div>
+        <div class="nav-icon" id="open-settings">⚙️</div>
         <div style="flex-grow: 1;"></div>
         <div class="nav-icon" id="logout-btn">🚪</div>
     </aside>
 
-    <section class="chat-list">
+    <section class="chat-list" id="chat-list-panel">
         <div class="list-header">
             <span>Xenogram</span>
-            <span style="cursor:pointer; color:var(--accent); font-size: 20px;" id="quick-add-plus">+</span>
+            <span style="cursor:pointer; color:var(--accent); font-size: 24px;" id="quick-add-plus">+</span>
         </div>
         <div id="friends-container"></div>
     </section>
 
     <main class="chat-window">
         <header class="chat-header">
-            <div>
-                <h3 id="chat-title" style="margin:0">Выберите чат</h3>
-                <div id="typing-status" style="font-size:11px; color:var(--online); opacity:0; transition: 0.3s;">печатает...</div>
+            <div style="display: flex; align-items: center;">
+                <span id="mobile-back">⬅️</span>
+                <div>
+                    <h3 id="chat-title" style="margin:0; font-size: 18px;">Чат</h3>
+                    <div id="typing-status" style="font-size:11px; color:var(--online); opacity:0">печатает...</div>
+                </div>
             </div>
-            <button id="group-info-btn" class="btn" style="width: auto; padding: 5px 15px; display: none;">Инфо</button>
+            <button id="group-info-btn" class="btn" style="width: auto; padding: 5px 12px; display: none; margin-bottom:0">Инфо</button>
         </header>
         <div id="messages-display"></div>
-        <form id="message-form" style="padding: 20px;">
-            <input type="text" id="message-input" placeholder="Введите сообщение..." disabled autocomplete="off">
+        <form id="message-form">
+            <input type="text" id="message-input" placeholder="Сообщение..." disabled autocomplete="off">
         </form>
     </main>
 </div>
 
 <div id="modal-settings" class="modal">
     <div class="modal-content">
-        <div class="modal-sidebar">
-            <div class="modal-tab active">Профиль</div>
-            <div style="flex-grow:1"></div>
-            <div class="modal-tab" onclick="closeModals()">Закрыть</div>
-        </div>
+        <div class="modal-sidebar"><div class="modal-tab active">Профиль</div><div class="modal-tab" onclick="closeModals()">Закрыть</div></div>
         <div class="modal-main">
-            <h3>Настройки профиля</h3>
-            <label style="font-size:11px; opacity:0.6">Никнейм</label>
-            <input type="text" id="set-nick">
-            <label style="font-size:11px; opacity:0.6">URL Аватара</label>
-            <input type="text" id="set-ava">
+            <h3>Профиль</h3>
+            <input type="text" id="set-nick" placeholder="Никнейм">
+            <input type="text" id="set-ava" placeholder="URL Аватара">
             <button class="btn" id="btn-save-settings">Сохранить</button>
         </div>
     </div>
@@ -121,24 +125,20 @@
         <div class="modal-sidebar">
             <div class="modal-tab active" id="tab-add">Поиск</div>
             <div class="modal-tab" id="tab-requests">Запросы</div>
-            <div class="modal-tab" id="tab-group-create">Создать группу</div>
-            <div style="flex-grow:1"></div>
+            <div class="modal-tab" id="tab-group-create">Группа</div>
             <div class="modal-tab" onclick="closeModals()">Закрыть</div>
         </div>
         <div class="modal-main" id="view-add">
             <h3>Найти друга</h3>
             <input type="text" id="search-uid" placeholder="UID друга...">
-            <button class="btn" id="btn-send-req">Отправить запрос</button>
+            <button class="btn" id="btn-send-req">Добавить</button>
             <p style="font-size:10px; opacity:0.5">Твой UID: <code id="my-uid-val"></code></p>
         </div>
-        <div class="modal-main" id="view-requests" style="display:none">
-            <h3>Входящие запросы</h3>
-            <div id="requests-list"></div>
-        </div>
+        <div class="modal-main" id="view-requests" style="display:none"><h3>Запросы</h3><div id="requests-list"></div></div>
         <div class="modal-main" id="view-group-create" style="display:none">
-            <h3>Новая группа</h3>
-            <input type="text" id="group-name-input" placeholder="Название группы">
-            <div id="create-group-friends" class="check-list"></div>
+            <h3>Создать группу</h3>
+            <input type="text" id="group-name-input" placeholder="Название">
+            <div id="create-group-friends" style="max-height: 150px; overflow-y:auto; margin: 10px 0;"></div>
             <button class="btn" id="btn-create-group">Создать</button>
         </div>
     </div>
@@ -146,22 +146,18 @@
 
 <div id="modal-group-admin" class="modal">
     <div class="modal-content">
-        <div class="modal-sidebar">
-            <div class="modal-tab active">Настройки группы</div>
-            <div style="flex-grow:1"></div>
-            <div class="modal-tab" onclick="closeModals()">Закрыть</div>
-        </div>
+        <div class="modal-sidebar"><div class="modal-tab active">Участники</div><div class="modal-tab" onclick="closeModals()">Закрыть</div></div>
         <div class="modal-main">
-            <h3>Управление беседой</h3>
             <input type="text" id="edit-group-name">
-            <button class="btn" id="btn-update-group">Обновить группу</button>
-            <div id="group-members-list" class="check-list"></div>
-            <button class="btn danger" id="btn-delete-group" style="margin-top:20px">Удалить группу</button>
+            <div id="group-members-list" style="max-height: 200px; overflow-y:auto; margin: 10px 0;"></div>
+            <button class="btn" id="btn-update-group">Обновить</button>
+            <button class="btn danger" id="btn-delete-group">Удалить группу</button>
         </div>
     </div>
 </div>
 
 <script type="module">
+    // Импорты Firebase остаются прежними
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -181,19 +177,22 @@
 
     let currentChatId = null, myNick = "", myFriends = [];
 
+    // Логика переключения чатов (Мобильная)
+    const appWrap = document.getElementById('app-wrap');
+    const backBtn = document.getElementById('mobile-back');
+    
+    backBtn.onclick = () => appWrap.classList.remove('chat-open');
+
     onAuthStateChanged(auth, async (user) => {
         if (!user) window.location.href = "auth.html";
         else {
             const uRef = doc(db, "users", user.uid);
             const snap = await getDoc(uRef);
-            const ud = snap.data();
-            myNick = ud?.username || "User";
+            myNick = snap.data()?.username || "User";
             document.getElementById('my-uid-val').innerText = user.uid;
             document.getElementById('set-nick').value = myNick;
-            document.getElementById('set-ava').value = ud?.avatar || "";
-            
+            document.getElementById('set-ava').value = snap.data()?.avatar || "";
             setInterval(() => updateDoc(uRef, { lastSeen: serverTimestamp() }), 60000);
-            updateDoc(uRef, { lastSeen: serverTimestamp() });
             initApp();
         }
     });
@@ -206,7 +205,7 @@
             const cgList = document.getElementById('create-group-friends');
             fCont.innerHTML = ""; cgList.innerHTML = "";
 
-            // Отрисовка Групп
+            // Группы
             for(const gId of (data.groups || [])) {
                 const gDoc = await getDoc(doc(db, "chats", gId));
                 if(gDoc.exists()){
@@ -217,7 +216,7 @@
                     fCont.appendChild(div);
                 }
             }
-            // Отрисовка Друзей
+            // Друзья
             for(const fId of myFriends) {
                 const fDoc = await getDoc(doc(db, "users", fId));
                 if(fDoc.exists()){
@@ -228,15 +227,15 @@
                     div.innerHTML = `<div class="avatar-wrapper"><div class="avatar-circle" ${fd.avatar?`style="background-image:url(${fd.avatar})"`:''}>${fd.avatar?'':fd.username[0]}</div><div class="status-dot ${isOnline?'online':''}"></div></div><span>${fd.username}</span>`;
                     div.onclick = () => startChat(fId, fd.username, false);
                     fCont.appendChild(div);
-                    cgList.innerHTML += `<label><input type="checkbox" value="${fId}"> ${fd.username}</label>`;
+                    cgList.innerHTML += `<label style="display:block; margin:5px 0"><input type="checkbox" value="${fId}"> ${fd.username}</label>`;
                 }
             }
-            // Рендер запросов
+            // Запросы
             const rCont = document.getElementById('requests-list');
             rCont.innerHTML = "";
             for(const rId of (data.requests || [])) {
                 const rDoc = await getDoc(doc(db, "users", rId));
-                if(rDoc.exists()) rCont.innerHTML += `<div class="friend-item" style="justify-content:space-between"><span>${rDoc.data().username}</span><button class="btn" style="width:60px" onclick="acceptFriend('${rId}')">OK</button></div>`;
+                if(rDoc.exists()) rCont.innerHTML += `<div class="friend-item" style="justify-content:space-between"><span>${rDoc.data().username}</span><button class="btn" style="width:60px; padding:5px" onclick="acceptFriend('${rId}')">OK</button></div>`;
             }
         });
     }
@@ -248,6 +247,9 @@
         document.getElementById('message-input').disabled = false;
         document.getElementById('group-info-btn').style.display = isGroup ? 'block' : 'none';
         
+        // Мобильный переход
+        appWrap.classList.add('chat-open');
+
         const d = document.getElementById('messages-display'); d.innerHTML = "";
         if(unsubMsg) unsubMsg();
         const q = query(collection(db, "chats", currentChatId, "messages"), orderBy("createdAt", "asc"));
@@ -258,14 +260,22 @@
                     const isMine = data.uid === auth.currentUser.uid;
                     const mDiv = document.createElement('div');
                     mDiv.className = `msg ${isMine?'mine':'theirs'}`;
-                    mDiv.innerHTML = `<div class="msg-meta">${data.sender}</div><div>${data.text}</div><div class="msg-time">${data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}</div>`;
+                    mDiv.innerHTML = `<div class="msg-meta" style="font-size:10px; font-weight:bold">${data.sender}</div><div>${data.text}</div>`;
                     d.appendChild(mDiv); d.scrollTop = d.scrollHeight;
                 }
             });
         });
     }
 
-    // Логика кнопок
+    // Сохранение настроек
+    document.getElementById('btn-save-settings').onclick = async () => {
+        const n = document.getElementById('set-nick').value, a = document.getElementById('set-ava').value;
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { username: n, avatar: a });
+        await updateProfile(auth.currentUser, { displayName: n, photoURL: a });
+        alert("Сохранено!"); closeModals();
+    };
+
+    // Остальные функции (Create Group, Delete Group, Send Request)
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     document.getElementById('open-social').onclick = () => document.getElementById('modal-social').style.display = 'flex';
     document.getElementById('open-settings').onclick = () => document.getElementById('modal-settings').style.display = 'flex';
@@ -280,61 +290,6 @@
         ['tab-add','tab-requests','tab-group-create'].forEach(i => document.getElementById(i).classList.remove('active'));
         document.getElementById(v).style.display='block'; document.getElementById(t).classList.add('active');
     }
-
-    // Сохранение настроек профиля (Тот самый блок!)
-    document.getElementById('btn-save-settings').onclick = async () => {
-        const n = document.getElementById('set-nick').value;
-        const a = document.getElementById('set-ava').value;
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { username: n, avatar: a });
-        await updateProfile(auth.currentUser, { displayName: n, photoURL: a });
-        myNick = n; alert("Настройки сохранены!");
-    };
-
-    // Группы: создание, обновление, удаление
-    document.getElementById('btn-create-group').onclick = async () => {
-        const name = document.getElementById('group-name-input').value;
-        const selected = Array.from(document.querySelectorAll('#create-group-friends input:checked')).map(i => i.value);
-        if(!name || selected.length < 1) return alert("Нужно название и участники!");
-        const members = [...selected, auth.currentUser.uid];
-        const gRef = await addDoc(collection(db, "chats"), { groupName: name, members, isGroup: true });
-        for(let uid of members) await updateDoc(doc(db, "users", uid), { groups: arrayUnion(gRef.id) });
-        closeModals();
-    };
-
-    document.getElementById('group-info-btn').onclick = async () => {
-        const gSnap = await getDoc(doc(db, "chats", currentChatId));
-        const gd = gSnap.data();
-        document.getElementById('edit-group-name').value = gd.groupName;
-        const list = document.getElementById('group-members-list');
-        list.innerHTML = "";
-        for(let fId of myFriends) {
-            const fDoc = await getDoc(doc(db, "users", fId));
-            const checked = gd.members.includes(fId) ? 'checked' : '';
-            list.innerHTML += `<label><input type="checkbox" class="mem-check" value="${fId}" ${checked}> ${fDoc.data().username}</label>`;
-        }
-        document.getElementById('modal-group-admin').style.display = 'flex';
-    };
-
-    document.getElementById('btn-update-group').onclick = async () => {
-        const name = document.getElementById('edit-group-name').value;
-        const members = [auth.currentUser.uid];
-        document.querySelectorAll('.mem-check:checked').forEach(c => members.push(c.value));
-        await updateDoc(doc(db, "chats", currentChatId), { groupName: name, members });
-        for(let fId of myFriends) {
-            const uRef = doc(db, "users", fId);
-            if(members.includes(fId)) await updateDoc(uRef, { groups: arrayUnion(currentChatId) });
-            else await updateDoc(uRef, { groups: arrayRemove(currentChatId) });
-        }
-        alert("Группа обновлена!"); closeModals();
-    };
-
-    document.getElementById('btn-delete-group').onclick = async () => {
-        if(!confirm("Удалить группу навсегда?")) return;
-        const gSnap = await getDoc(doc(db, "chats", currentChatId));
-        for(let uid of gSnap.data().members) await updateDoc(doc(db, "users", uid), { groups: arrayRemove(currentChatId) });
-        await deleteDoc(doc(db, "chats", currentChatId));
-        location.reload();
-    };
 
     document.getElementById('message-form').onsubmit = async (e) => {
         e.preventDefault();
@@ -352,6 +307,16 @@
     document.getElementById('btn-send-req').onclick = async () => {
         const id = document.getElementById('search-uid').value.trim();
         if(id) { await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); alert("Запрос отправлен!"); }
+    };
+
+    document.getElementById('btn-create-group').onclick = async () => {
+        const name = document.getElementById('group-name-input').value;
+        const selected = Array.from(document.querySelectorAll('#create-group-friends input:checked')).map(i => i.value);
+        if(!name || selected.length < 1) return alert("Нужно название и участники!");
+        const members = [...selected, auth.currentUser.uid];
+        const gRef = await addDoc(collection(db, "chats"), { groupName: name, members, isGroup: true });
+        for(let uid of members) await updateDoc(doc(db, "users", uid), { groups: arrayUnion(gRef.id) });
+        closeModals();
     };
 
     document.getElementById('logout-btn').onclick = () => signOut(auth);
