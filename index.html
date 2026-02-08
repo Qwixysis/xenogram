@@ -212,7 +212,6 @@
             const cgList = document.getElementById('grp-friends-select');
             fCont.innerHTML = ""; cgList.innerHTML = "";
 
-            // Группы
             for(const gId of (data.groups || [])) {
                 const gDoc = await getDoc(doc(db, "chats", gId));
                 if(gDoc.exists()){
@@ -223,7 +222,6 @@
                 }
             }
 
-            // Друзья
             for(const fId of (data.friends || [])) {
                 const fDoc = await getDoc(doc(db, "users", fId));
                 if(fDoc.exists()){
@@ -244,7 +242,6 @@
                 }
             }
 
-            // Запросы
             const rCont = document.getElementById('req-list'); rCont.innerHTML = "";
             for(const rId of (data.requests || [])) {
                 const rDoc = await getDoc(doc(db, "users", rId));
@@ -356,6 +353,18 @@
     document.getElementById('open-settings').onclick = () => document.getElementById('modal-settings').style.display = 'flex';
     document.getElementById('logout-btn').onclick = async () => {
         await updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }); signOut(auth);
+    };
+
+    // --- FIX: Save Profile Button ---
+    document.getElementById('btn-save-prof').onclick = async () => {
+        const newNick = document.getElementById('set-nick').value.trim();
+        const newAva = document.getElementById('set-ava').value.trim();
+        if (newNick) {
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { username: newNick, avatar: newAva });
+            myNick = newNick;
+            alert("Сохранено!");
+            closeModals();
+        }
     };
 </script>
 </body>
