@@ -1,13 +1,219 @@
-<style>
-    .message-bubble {
-        background: #32353b; padding: 10px 15px; border-radius: 8px;
-        margin-bottom: 10px; max-width: 80%; width: fit-content;
-        border-left: 4px solid var(--accent-alt);
-    }
-    .message-bubble b { color: var(--accent); display: block; font-size: 12px; }
-    
-    /* Стили для формы отправки */
-    #message-form { display: flex; gap: 10px; padding: 10px; background: var(--bg-side); }
-    #message-input { flex-grow: 1; border: none; padding: 10px; border-radius: 5px; background: #40444b; color: white; }
-    #message-form button { background: var(--grad); border: none; padding: 10px 20px; color: white; border-radius: 5px; cursor: pointer; }
-</style>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xenogram - Messenger</title>
+    <style>
+        :root {
+            --bg-main: #1e1e1e;       /* Глубокий серый */
+            --bg-side: #23272a;       /* Графит */
+            --bg-nav: #111111;        /* Черный как в Discord */
+            --accent: #7289da;        /* Синий */
+            --accent-alt: #9b59b6;    /* Фиолетовый */
+            --text-main: #ffffff;
+            --text-dim: #b9bbbe;
+            --grad: linear-gradient(135deg, #7289da, #9b59b6);
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-main); color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .app-container { display: flex; height: 100vh; width: 100vw; }
+
+        /* Панель навигации (Discord style) */
+        .side-nav {
+            width: 70px; background: var(--bg-nav);
+            display: flex; flex-direction: column; align-items: center; padding-top: 15px;
+        }
+
+        .nav-icon {
+            width: 48px; height: 48px; background: var(--bg-side);
+            border-radius: 50%; margin-bottom: 12px; cursor: pointer;
+            transition: 0.2s ease; display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+
+        .nav-icon:hover { border-radius: 15px; background: var(--grad); }
+        .nav-icon.active { border-radius: 15px; background: var(--grad); }
+
+        /* Список чатов (Telegram style) */
+        .chat-list {
+            width: 320px; background: var(--bg-side);
+            border-right: 1px solid #111; display: flex; flex-direction: column;
+        }
+
+        .list-header { padding: 20px; border-bottom: 1px solid #111; font-weight: bold; font-size: 18px; }
+
+        /* Окно сообщений */
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); }
+
+        .chat-header {
+            height: 60px; padding: 0 20px; display: flex; align-items: center;
+            background: var(--bg-main); border-bottom: 1px solid #111;
+        }
+
+        #messages-display {
+            flex-grow: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        /* Стиль сообщения */
+        .message-bubble {
+            background: #2f3136; padding: 10px 15px; border-radius: 12px;
+            max-width: 70%; width: fit-content; align-self: flex-start;
+            position: relative; border-left: 3px solid var(--accent-alt);
+        }
+
+        .message-bubble.my-msg {
+            align-self: flex-end; border-left: none; border-right: 3px solid var(--accent);
+            background: #36393f;
+        }
+
+        .msg-user { color: var(--accent); font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .msg-text { font-size: 15px; line-height: 1.4; }
+
+        /* Поле ввода */
+        .input-area {
+            padding: 20px; background: var(--bg-main);
+        }
+
+        #message-form {
+            display: flex; gap: 10px; background: #40444b;
+            padding: 10px 15px; border-radius: 8px;
+        }
+
+        #message-input {
+            flex-grow: 1; background: transparent; border: none;
+            color: white; outline: none; font-size: 16px;
+        }
+
+        .send-btn {
+            background: transparent; border: none; color: var(--accent);
+            cursor: pointer; font-weight: bold; font-size: 16px;
+        }
+
+        /* Скроллбар */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #111; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="app-container">
+        <aside class="side-nav">
+            <div class="nav-icon active">💬</div>
+            <div class="nav-icon">👥</div>
+            <div class="nav-icon" id="settings-btn">⚙️</div>
+            <div style="flex-grow: 1;"></div>
+            <div class="nav-icon" id="logout-btn">🚪</div>
+        </aside>
+
+        <section class="chat-list">
+            <div class="list-header">Xenogram</div>
+            <div id="chats-container" style="padding: 10px; color: var(--text-dim);">
+                Общий чат (Public)
+            </div>
+        </section>
+
+        <main class="chat-window">
+            <header class="chat-header">
+                <h3 id="current-chat-name"># Общий канал</h3>
+            </header>
+            
+            <div id="messages-display">
+                </div>
+
+            <div class="input-area">
+                <form id="message-form">
+                    <input type="text" id="message-input" placeholder="Написать сообщение..." autocomplete="off">
+                    <button type="submit" class="send-btn">ОТПРАВИТЬ</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Твой конфиг
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqH9q3k1Ekl5KxxpBkFEm9OxgCtixshJY",
+            authDomain: "xenogram-4a1c0.firebaseapp.com",
+            projectId: "xenogram-4a1c0",
+            storageBucket: "xenogram-4a1c0.firebasestorage.app",
+            messagingSenderId: "219275152669",
+            appId: "1:219275152669:web:ee7d63910d3a8e4ff065f4",
+            measurementId: "G-2B2ZX9HSF9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const msgDisplay = document.getElementById('messages-display');
+        const msgForm = document.getElementById('message-form');
+        const msgInput = document.getElementById('message-input');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        // 1. Проверка авторизации
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "auth.html"; // Если не залогинен - на выход
+            } else {
+                loadMessages();
+            }
+        });
+
+        // 2. Выход из аккаунта
+        logoutBtn.onclick = () => signOut(auth);
+
+        // 3. Отправка сообщения
+        msgForm.onsubmit = async (e) => {
+            e.preventDefault();
+            if (msgInput.value.trim() === "" || !auth.currentUser) return;
+
+            try {
+                await addDoc(collection(db, "messages"), {
+                    text: msgInput.value,
+                    uid: auth.currentUser.uid,
+                    userName: auth.currentUser.displayName || "User",
+                    createdAt: serverTimestamp()
+                });
+                msgInput.value = "";
+                msgDisplay.scrollTop = msgDisplay.scrollHeight;
+            } catch (err) {
+                console.error("Ошибка отправки:", err);
+            }
+        };
+
+        // 4. Загрузка сообщений в реальном времени
+        function loadMessages() {
+            const q = query(collection(db, "messages"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snapshot) => {
+                msgDisplay.innerHTML = "";
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const isMyMsg = data.uid === auth.currentUser.uid;
+                    
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `message-bubble ${isMyMsg ? 'my-msg' : ''}`;
+                    msgDiv.innerHTML = `
+                        <div class="msg-user">${data.userName}</div>
+                        <div class="msg-text">${data.text}</div>
+                    `;
+                    msgDisplay.appendChild(msgDiv);
+                });
+                msgDisplay.scrollTop = msgDisplay.scrollHeight;
+            });
+        }
+    </script>
+</body>
+</html>
