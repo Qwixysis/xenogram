@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xenogram - Авторизация</title>
     <style>
-        body { background: #1e1e1e; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { background: #1e1e1e; color: white; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
         .auth-card { background: #23272a; padding: 30px; border-radius: 12px; width: 100%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #111; color: white; box-sizing: border-box; outline: none; }
         input:focus { border-color: #7289da; }
@@ -47,13 +47,12 @@
 
     let isLogin = true;
 
-    // --- ПРЕДОХРАНИТЕЛЬ РЕДИРЕКТА ---
+    // ПРОВЕРКА СОСТОЯНИЯ: Если вошел — на index.html
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            console.log("Пользователь найден, переходим в чат...");
-            // Замени 'index.html' на имя файла, где у тебя сам чат
-            if (!window.location.pathname.includes('index.html')) {
-                window.location.href = "index.html"; 
+            // Если мы НЕ на index.html, то уходим туда
+            if (!window.location.pathname.endsWith('index.html')) {
+                window.location.href = "index.html";
             }
         }
     });
@@ -83,7 +82,6 @@
             } else {
                 if (!nick) return alert("Введите никнейм!");
                 const res = await createUserWithEmailAndPassword(auth, email, pass);
-                // Создаем профиль в базе сразу после регистрации
                 await setDoc(doc(db, "users", res.user.uid), {
                     username: nick,
                     avatar: "",
