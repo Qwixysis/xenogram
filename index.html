@@ -203,7 +203,6 @@
         if (!user) {
             window.location.href = "auth.html";
         } else {
-            // Принудительно отображаем UID сразу после авторизации
             document.getElementById('my-uid-val').innerText = user.uid;
             
             await updateDoc(doc(db, "users", user.uid), { isOnline: true, lastSeen: serverTimestamp() });
@@ -219,12 +218,10 @@
     });
 
     function initApp() {
-        // Подписка на данные текущего пользователя для обновления списка друзей и запросов в реальном времени
         onSnapshot(doc(db, "users", auth.currentUser.uid), async (snap) => {
             const data = snap.data(); 
             if(!data) return;
 
-            // Обновляем UID еще раз для надежности
             document.getElementById('my-uid-val').innerText = auth.currentUser.uid;
 
             const fCont = document.getElementById('friends-container');
@@ -234,6 +231,7 @@
 
             // Группы
             for(const gId of (data.groups || [])) {
+                if(!gId) continue;
                 const gDoc = await getDoc(doc(db, "chats", gId));
                 if(gDoc.exists()){
                     const d = document.createElement('div'); d.className = 'friend-item';
@@ -245,6 +243,7 @@
 
             // Друзья
             for(const fId of (data.friends || [])) {
+                if(!fId) continue;
                 const fDoc = await getDoc(doc(db, "users", fId));
                 if(fDoc.exists()){
                     const fd = fDoc.data();
@@ -264,7 +263,7 @@
                 }
             }
 
-            // Рендеринг ЗАПРОСОВ (Отремонтированный блок)
+            // --- ОТРЕМОНТИРОВАННЫЙ БЛОК ОЖИДАНИЯ (ЗАПРОСОВ) ---
             const rCont = document.getElementById('req-list'); 
             rCont.innerHTML = "";
             const requests = data.requests || [];
@@ -272,30 +271,35 @@
             if(requests.length === 0) {
                 rCont.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Нет входящих запросов</p>";
             } else {
-                for(const rId of requests) {
-                    const rDoc = await getDoc(doc(db, "users", rId));
-                    if(rDoc.exists()) {
+                // Используем Promise.all для быстрой загрузки всех отправителей запросов
+                const reqPromises = requests.map(rid => rid ? getDoc(doc(db, "users", rid)) : null);
+                const reqSnaps = await Promise.all(reqPromises);
+
+                reqSnaps.forEach(rDoc => {
+                    if(rDoc && rDoc.exists()) {
                         const rData = rDoc.data();
+                        const rId = rDoc.id;
                         const rDiv = document.createElement('div');
                         rDiv.className = 'friend-item';
                         rDiv.style.justifyContent = 'space-between';
                         rDiv.innerHTML = `
                             <div style="display:flex; align-items:center; gap:10px">
-                                <div class="avatar-circle" style="width:30px; height:30px; font-size:12px">
-                                    ${rData.avatar ? '' : rData.username[0]}
+                                <div class="avatar-circle" style="width:30px; height:30px; font-size:12px; background-image: ${rData.avatar ? 'url('+rData.avatar+')' : 'none'}">
+                                    ${rData.avatar ? '' : (rData.username ? rData.username[0] : '?')}
                                 </div>
-                                <span>${rData.username}</span>
+                                <span>${rData.username || 'Аноним'}</span>
                             </div>
                             <button class="btn" onclick="window.acceptFriend('${rId}')" style="padding: 5px 15px;">Принять</button>
                         `;
                         rCont.appendChild(rDiv);
                     }
-                }
+                });
             }
         });
     }
 
     window.startChat = (id, name, isGroup) => {
+        if(!id) return;
         currentChatId = isGroup ? id : [auth.currentUser.uid, id].sort().join('_');
         document.getElementById('chat-title').innerText = name;
         document.getElementById('message-input').disabled = false;
@@ -360,6 +364,7 @@
         msgInp.value = window.tempText; 
         msgInp.classList.add('edit-mode-active'); 
         msgInp.focus(); 
+        hideActions();
     };
     
     window.deleteMsg = async () => { 
@@ -386,6 +391,7 @@
     };
 
     window.acceptFriend = async (id) => {
+        if(!id) return;
         try {
             await updateDoc(doc(db, "users", auth.currentUser.uid), { 
                 requests: arrayRemove(id), 
@@ -402,6 +408,7 @@
     };
 
     window.openFriendProfile = async (id) => {
+        if(!id) return;
         viewedFriendId = id;
         const s = await getDoc(doc(db, "users", id));
         if(s.exists()){
@@ -415,24 +422,38 @@
         }
     };
 
+    // --- ИСПРАВЛЕННАЯ ОТПРАВКА ЗАПРОСА ---
     document.getElementById('btn-send-req').onclick = async () => {
         const id = document.getElementById('search-uid').value.trim();
-        if(!id) return;
+        if(!id) { alert("Введите UID"); return; }
         if(id === auth.currentUser.uid) { alert("Нельзя добавить самого себя"); return; }
+        
         try {
             const userRef = doc(db, "users", id);
             const userSnap = await getDoc(userRef);
-            if(!userSnap.exists()) { alert("Пользователь с таким UID не найден"); return; }
             
-            // Проверяем, не в друзьях ли уже пользователь
+            if(!userSnap.exists()) { 
+                alert("Пользователь с таким UID не найден. Проверьте правильность ID."); 
+                return; 
+            }
+            
             const mySnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-            if(mySnap.data().friends?.includes(id)) { alert("Этот пользователь уже у вас в друзьях"); return; }
+            const myData = mySnap.data();
+            
+            if(myData.friends && myData.friends.includes(id)) { 
+                alert("Этот пользователь уже у вас в друзьях"); 
+                return; 
+            }
 
-            await updateDoc(userRef, { requests: arrayUnion(auth.currentUser.uid) }); 
+            await updateDoc(userRef, { 
+                requests: arrayUnion(auth.currentUser.uid) 
+            }); 
+            
             alert("Запрос отправлен!"); 
             document.getElementById('search-uid').value = "";
         } catch(e) {
-            alert("Ошибка отправки. Проверьте правильность UID.");
+            console.error(e);
+            alert("Ошибка: некорректный формат UID или проблема сети.");
         }
     };
 
@@ -491,7 +512,6 @@
         }
     };
     
-    // Копирование UID при клике
     document.getElementById('my-uid-val').onclick = function() {
         navigator.clipboard.writeText(this.innerText);
         alert("UID скопирован!");
