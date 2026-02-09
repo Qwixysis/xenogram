@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Xenogram Ultimate - Jarvis Edition</title>
     <style>
-        /* ПОЛНЫЙ ПАКЕТ СТИЛЕЙ */
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
             --accent: #7289da; --accent-hover: #5b70be; --danger: #f04747; --online: #43b581;
@@ -100,7 +99,6 @@
         .modal-body { padding: 16px; overflow-y: auto; }
         
         .section-title { font-size: 12px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 8px; margin-top: 15px; }
-        .input-group { margin-bottom: 20px; }
         .modal-input { background: #202225; border: 1px solid #111; color: white; padding: 10px; border-radius: 4px; width: 100%; outline: none; }
         
         .btn { padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; font-weight: 600; color: white; background: var(--accent); transition: 0.2s; }
@@ -109,11 +107,6 @@
         /* AVATARS */
         .avatar-circle { width: 38px; height: 38px; border-radius: 50%; background: #36393f; display: flex; align-items: center; justify-content: center; font-weight: 600; position: relative; background-size: cover; background-position: center; flex-shrink: 0; }
         .online-dot { width: 14px; height: 14px; background: var(--online); border-radius: 50%; border: 3px solid var(--bg-side); position: absolute; bottom: -2px; right: -2px; }
-
-        /* ANIMATIONS */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
         /* CONTEXT MENU */
         .ctx-menu { display: none; position: absolute; background: #18191c; border-radius: 4px; border: 1px solid rgba(0,0,0,0.5); z-index: 10000; padding: 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); min-width: 160px; }
@@ -129,6 +122,10 @@
         }
 
         .req-card { background: #2f3136; padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.2); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body onclick="hideContext()">
@@ -249,7 +246,6 @@
             myData = snap.data();
             if(!myData) return;
 
-            // ОБРАБОТКА ЗАЯВОК (FIXED LOGIC)
             const reqs = myData.requests || [];
             document.getElementById('global-badge').innerText = reqs.length;
             document.getElementById('global-badge').style.display = reqs.length > 0 ? "block" : "none";
@@ -273,12 +269,10 @@
                 rBox.appendChild(div);
             }
 
-            // ДРУЗЬЯ И ГРУППЫ
             const fCont = document.getElementById('friends-container');
             const gBox = document.getElementById('group-select-list');
             fCont.innerHTML = ""; gBox.innerHTML = "";
 
-            // Друзья
             for(const fid of (myData.friends || [])) {
                 const fSnap = await getDoc(doc(db, "users", fid));
                 if(fSnap.exists()) {
@@ -287,7 +281,6 @@
                     gBox.innerHTML += `<label style="display:flex; align-items:center; gap:10px; padding:5px; cursor:pointer"><input type="checkbox" value="${fid}"> ${f.username}</label>`;
                 }
             }
-            // Группы
             for(const gid of (myData.groups || [])) {
                 const gSnap = await getDoc(doc(db, "chats", gid));
                 if(gSnap.exists()) renderFriendRow(gid, gSnap.data().groupName, true, false);
@@ -319,30 +312,31 @@
         document.getElementById('friends-container').appendChild(div);
     }
 
-    // ЛОГИКА ПРИНЯТИЯ (SUPER FIX)
+    // ЛОГИКА ПРИНЯТИЯ (FULL FIX)
     window.acceptFriend = async (rid) => {
         const my = auth.currentUser.uid;
         try {
-            // 1. Обновляем обоих юзеров через setDoc merge для надежности
-            await setDoc(doc(db, "users", my), { 
+            await updateDoc(doc(db, "users", my), { 
                 friends: arrayUnion(rid), 
                 requests: arrayRemove(rid) 
-            }, { merge: true });
+            });
             
-            await setDoc(doc(db, "users", rid), { 
+            await updateDoc(doc(db, "users", rid), { 
                 friends: arrayUnion(my) 
-            }, { merge: true });
+            }).catch(async () => {
+                await setDoc(doc(db, "users", rid), { friends: arrayUnion(my) }, { merge: true });
+            });
 
-            // 2. Инициализируем документ чата
             const cid = [my, rid].sort().join('_');
             await setDoc(doc(db, "chats", cid), {
                 type: 'private',
                 users: [my, rid],
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                lastUpdate: serverTimestamp()
             }, { merge: true });
 
-            console.log("Friend accepted and chat created");
-        } catch(e) { alert("Ошибка: " + e.message); }
+            console.log("Friend accepted");
+        } catch(e) { alert("Ошибка доступа! Проверь Rules в консоли."); }
     };
 
     window.rejectFriend = async (rid) => {
@@ -356,7 +350,6 @@
         }
     };
 
-    // ЧАТ И СООБЩЕНИЯ
     window.startChat = (id, name, isGrp) => {
         curChatId = isGrp ? id : [auth.currentUser.uid, id].sort().join('_');
         document.getElementById('chat-title').innerText = name;
@@ -364,9 +357,9 @@
         document.getElementById('message-input').disabled = false;
         document.getElementById('message-input').focus();
         
-        if(window.innerWidth <= 768) toggleSidebar(); // Закрыть меню на мобилках
-
+        if(window.innerWidth <= 768) toggleSidebar();
         if(unsubMsg) unsubMsg();
+
         const q = query(collection(db, "chats", curChatId, "messages"), orderBy("createdAt", "asc"));
         unsubMsg = onSnapshot(q, (snap) => {
             const display = document.getElementById('messages-display');
@@ -407,22 +400,17 @@
         }
     };
 
-    // ГРУППЫ
     document.getElementById('btn-create-group').onclick = async () => {
         const gName = document.getElementById('new-group-name').value.trim();
         const checked = Array.from(document.querySelectorAll('#group-select-list input:checked')).map(i => i.value);
         if(!gName || checked.length === 0) return alert("Введите имя и выберите друзей!");
-
         const gId = 'group_' + Date.now();
         const members = [...checked, auth.currentUser.uid];
         await setDoc(doc(db, "chats", gId), { groupName: gName, members: members, isGroup: true });
-        for(const m of members) {
-            await updateDoc(doc(db, "users", m), { groups: arrayUnion(gId) });
-        }
+        for(const m of members) { await updateDoc(doc(db, "users", m), { groups: arrayUnion(gId) }); }
         closeModals();
     };
 
-    // СИСТЕМНОЕ
     window.showCtx = (e, id, txt) => {
         e.preventDefault(); activeMsgId = id; window.lastTxt = txt;
         const menu = document.getElementById('msg-ctx');
@@ -430,7 +418,7 @@
     };
     window.hideContext = () => document.getElementById('msg-ctx').style.display = 'none';
     window.startEdit = () => { isEdit = true; document.getElementById('message-input').value = window.lastTxt; document.getElementById('message-input').focus(); };
-    window.confirmDelete = async () => { if(confirm("Удалить сообщение?")) await deleteDoc(doc(db, "chats", curChatId, "messages", activeMsgId)); };
+    window.confirmDelete = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", curChatId, "messages", activeMsgId)); };
 
     window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
     window.openSettings = () => { 
@@ -449,7 +437,6 @@
         if(!tid || tid === auth.currentUser.uid) return alert("Неверный ID");
         await setDoc(doc(db, "users", tid), { requests: arrayUnion(auth.currentUser.uid) }, { merge: true });
         alert("Запрос отправлен!");
-        document.getElementById('search-uid').value = "";
     };
 
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
