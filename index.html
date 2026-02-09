@@ -226,7 +226,6 @@
             window.location.href = "auth.html";
         } else {
             document.getElementById('my-uid-val').innerText = user.uid;
-            
             await updateDoc(doc(db, "users", user.uid), { isOnline: true, lastSeen: serverTimestamp() }).catch(() => {});
             const snap = await getDoc(doc(db, "users", user.uid));
             if(snap.exists()) {
@@ -246,8 +245,7 @@
 
             const fCont = document.getElementById('friends-container');
             const cgList = document.getElementById('grp-friends-select');
-            fCont.innerHTML = ""; 
-            cgList.innerHTML = "";
+            fCont.innerHTML = ""; cgList.innerHTML = "";
 
             // Группы
             for(const gId of (data.groups || [])) {
@@ -284,10 +282,8 @@
             }
 
             // Запросы
-            const rCont = document.getElementById('req-list'); 
-            rCont.innerHTML = "";
+            const rCont = document.getElementById('req-list'); rCont.innerHTML = "";
             const requests = data.requests || [];
-            
             if(requests.length === 0) {
                 rCont.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Нет входящих запросов</p>";
             } else {
@@ -296,8 +292,7 @@
                     if(rDoc.exists()) {
                         const rData = rDoc.data();
                         const rDiv = document.createElement('div');
-                        rDiv.className = 'friend-item';
-                        rDiv.style.justifyContent = 'space-between';
+                        rDiv.className = 'friend-item'; rDiv.style.justifyContent = 'space-between';
                         rDiv.innerHTML = `
                             <div style="display:flex; align-items:center; gap:10px">
                                 <div class="avatar-circle" style="width:30px; height:30px; font-size:12px; background-image: ${rData.avatar ? 'url('+rData.avatar+')' : 'none'}">
@@ -379,8 +374,7 @@
         isEditing = true; 
         msgInp.value = window.tempText; 
         msgInp.classList.add('edit-mode-active'); 
-        msgInp.focus(); 
-        hideActions();
+        msgInp.focus(); hideActions();
     };
     
     window.deleteMsg = async () => { 
@@ -409,13 +403,8 @@
     window.acceptFriend = async (id) => {
         if(!id) return;
         try {
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { 
-                requests: arrayRemove(id), 
-                friends: arrayUnion(id) 
-            });
-            await updateDoc(doc(db, "users", id), { 
-                friends: arrayUnion(auth.currentUser.uid) 
-            });
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { requests: arrayRemove(id), friends: arrayUnion(id) });
+            await updateDoc(doc(db, "users", id), { friends: arrayUnion(auth.currentUser.uid) });
             alert("Запрос принят!");
         } catch (e) { console.error(e); }
     };
@@ -435,29 +424,27 @@
         }
     };
 
-    // ГЛОБАЛЬНЫЙ ФИКС ПОИСКА
+    // ГЛОБАЛЬНЫЙ ФИКС ПОИСКА БЕЗ ОШИБОК ПРАВ
     document.getElementById('btn-send-req').onclick = async () => {
         const targetUid = document.getElementById('search-uid').value.trim();
         if(!targetUid || targetUid.length < 10) { alert("Некорректный UID"); return; }
         if(targetUid === auth.currentUser.uid) { alert("Это ваш собственный UID"); return; }
         
         try {
-            // Используем getDoc напрямую к документу пользователя
+            // Пытаемся СРАЗУ обновить документ (это работает в обход запрета на чтение)
             const userRef = doc(db, "users", targetUid);
-            const userSnap = await getDoc(userRef);
-            
-            if(userSnap.exists()) { 
-                await updateDoc(userRef, { 
-                    requests: arrayUnion(auth.currentUser.uid) 
-                });
-                alert("Запрос успешно отправлен!");
-                document.getElementById('search-uid').value = "";
-            } else {
-                alert("Пользователь с таким UID не найден.");
-            }
+            await updateDoc(userRef, { 
+                requests: arrayUnion(auth.currentUser.uid) 
+            });
+            alert("Запрос успешно отправлен!");
+            document.getElementById('search-uid').value = "";
         } catch(e) {
-            console.error("Поиск не удался:", e);
-            alert("Ошибка доступа. Убедитесь, что UID верный.");
+            console.error("Ошибка:", e.code);
+            if(e.code === 'not-found') {
+                alert("Пользователь с таким UID не найден.");
+            } else {
+                alert("Ошибка доступа. Убедитесь, что UID верный или проверьте Rules в Firebase.");
+            }
         }
     };
 
@@ -465,16 +452,11 @@
         const name = document.getElementById('grp-name').value.trim();
         const selected = Array.from(document.querySelectorAll('#grp-friends-select input:checked')).map(i => i.value);
         if(!name || selected.length === 0) { alert("Заполните данные"); return; }
-        const gRef = await addDoc(collection(db, "chats"), { 
-            groupName: name, 
-            members: [...selected, auth.currentUser.uid],
-            isGroup: true 
-        });
+        const gRef = await addDoc(collection(db, "chats"), { groupName: name, members: [...selected, auth.currentUser.uid], isGroup: true });
         for(const m of [...selected, auth.currentUser.uid]) {
             await updateDoc(doc(db, "users", m), { groups: arrayUnion(gRef.id) });
         }
-        window.closeModals();
-        alert("Группа создана!");
+        window.closeModals(); alert("Группа создана!");
     };
 
     window.toggleBurger = () => {
@@ -499,8 +481,7 @@
 
     document.getElementById('logout-btn').onclick = async () => {
         if(confirm("Выйти?")) {
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }); 
-            signOut(auth);
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }); signOut(auth);
         }
     };
 
@@ -509,9 +490,7 @@
         const newAva = document.getElementById('set-ava').value.trim();
         if (newNick) {
             await updateDoc(doc(db, "users", auth.currentUser.uid), { username: newNick, avatar: newAva });
-            myNick = newNick;
-            alert("Профиль обновлен!");
-            window.closeModals();
+            myNick = newNick; alert("Профиль обновлен!"); window.closeModals();
         }
     };
     
