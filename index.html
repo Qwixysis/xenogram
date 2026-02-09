@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xenogram Ultimate - Jarvis Elite</title>
+    <title>Xenogram Ultimate - Jarvis Master Edition</title>
     <style>
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
@@ -16,11 +16,10 @@
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
         .app-container { display: flex; height: 100vh; width: 100vw; position: relative; }
 
-        /* Анимации появления */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Side Nav */
-        .side-nav { width: 70px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 15px; flex-shrink: 0; }
+        /* Навигация */
+        .side-nav { width: 70px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 15px; flex-shrink: 0; z-index: 1000; }
         .nav-icon { 
             width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; 
             cursor: pointer; display: flex; align-items: center; justify-content: center; 
@@ -28,18 +27,18 @@
         }
         .nav-icon:hover { border-radius: 15px; background: var(--accent); transform: scale(1.1); }
 
-        /* Chat List */
-        .chat-list { width: 320px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; }
+        /* Список чатов */
+        .chat-list { width: 320px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; flex-shrink: 0; }
         .list-header { padding: 20px; font-weight: bold; border-bottom: 1px solid #111; font-size: 18px; }
         
-        /* Социалка сверху */
+        /* Социалка */
         .social-bar { padding: 15px; border-bottom: 1px solid #111; }
         .add-friend-btn { 
             width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; 
             color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; 
             justify-content: center; gap: 10px; transition: var(--anim); position: relative;
         }
-        .add-friend-btn:hover { background: #5b70be; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .add-friend-btn:hover { background: #5b70be; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .req-badge { 
             background: var(--danger); font-size: 11px; padding: 2px 7px; border-radius: 10px; 
             position: absolute; right: 10px; animation: pulse 2s infinite;
@@ -48,51 +47,54 @@
 
         #friends-container { overflow-y: auto; flex-grow: 1; padding: 10px 0; }
         
-        /* Карточка друга */
+        /* Элемент списка */
         .friend-item { 
             padding: 12px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; 
-            transition: var(--anim); position: relative;
+            transition: var(--anim); position: relative; border-bottom: 1px solid rgba(0,0,0,0.1);
         }
         .friend-item:hover { background: rgba(255,255,255,0.05); padding-left: 25px; }
-        .friend-name-text { flex-grow: 1; font-weight: 500; }
+        .friend-name-text { flex-grow: 1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Кнопки управления в списке */
         .friend-controls { display: none; gap: 8px; animation: fadeIn 0.2s; }
         .friend-item:hover .friend-controls { display: flex; }
-        .ctrl-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: var(--anim); }
+        .ctrl-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; transition: var(--anim); padding: 5px; }
         .ctrl-btn:hover { color: white; transform: scale(1.2); }
         .ctrl-btn.del:hover { color: var(--danger); }
 
-        /* Chat Window */
-        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); }
-        .chat-header { padding: 15px 25px; border-bottom: 1px solid #111; background: var(--bg-side); display: flex; align-items: center; justify-content: space-between; }
+        /* Окно чата */
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); position: relative; }
+        .chat-header { padding: 15px 25px; border-bottom: 1px solid #111; background: var(--bg-side); min-height: 60px; display: flex; align-items: center; justify-content: space-between; }
         #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
         
-        .msg { padding: 10px 15px; border-radius: 15px; max-width: 65%; transition: var(--anim); animation: fadeIn 0.3s; position: relative; }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 65%; transition: var(--anim); animation: fadeIn 0.3s; position: relative; cursor: pointer; }
         .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
         .msg.theirs { align-self: flex-start; background: #32353b; border-bottom-left-radius: 2px; }
+        .msg-meta { font-size: 10px; opacity: 0.6; margin-bottom: 4px; }
 
-        #message-form-container { padding: 20px; background: var(--bg-side); }
+        #message-form-container { padding: 20px; background: var(--bg-side); border-top: 1px solid #111; }
+        #typing-indicator { font-size: 12px; color: var(--online); height: 18px; opacity: 0; transition: 0.3s; }
         input { background: #1e1e1e; border: 1px solid #444; color: white; padding: 14px; border-radius: 10px; width: 100%; box-sizing: border-box; outline: none; transition: var(--anim); }
         input:focus { border-color: var(--accent); background: #252525; }
 
         /* Модалки */
         .modal { display: none; position: fixed; z-index: 9999; inset: 0; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; backdrop-filter: blur(8px); animation: fadeIn 0.2s; }
-        .modal-content { background: var(--bg-side); width: 550px; border-radius: 15px; display: flex; height: 480px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal-content { background: var(--bg-side); width: 550px; border-radius: 15px; display: flex; height: 500px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
         .modal-sidebar { width: 150px; background: #111; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .modal-main { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .modal-main { flex-grow: 1; padding: 30px; overflow-y: auto; position: relative; }
         .modal-tab { cursor: pointer; color: var(--text-dim); padding: 10px; border-radius: 8px; transition: var(--anim); }
         .modal-tab.active { background: #333; color: white; font-weight: bold; }
-        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; background: var(--accent); transition: var(--anim); }
-        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; background: var(--accent); transition: var(--anim); text-align: center; }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        .avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; position: relative; background-size: cover; background-position: center; }
+        .avatar-circle { width: 42px; height: 42px; border-radius: 50%; background: var(--grad); display: flex; align-items: center; justify-content: center; font-weight: bold; position: relative; background-size: cover; background-position: center; flex-shrink: 0; }
         .online-status { width: 12px; height: 12px; background: var(--online); border-radius: 50%; border: 2px solid var(--bg-side); position: absolute; bottom: 0; right: 0; }
         
-        #typing-text { font-size: 12px; color: var(--online); margin-bottom: 5px; height: 15px; opacity: 0; transition: 0.3s; }
+        .msg-actions { display: none; position: absolute; background: #111; border-radius: 8px; border: 1px solid #333; z-index: 10000; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        .msg-actions button { display: block; width: 100%; padding: 10px 15px; border: none; background: none; color: white; cursor: pointer; text-align: left; transition: 0.2s; }
+        .msg-actions button:hover { background: #222; }
     </style>
 </head>
-<body onclick="hideContextMenu()">
+<body onclick="hideMsgActions()">
 
 <div class="app-container">
     <aside class="side-nav">
@@ -103,7 +105,7 @@
     </aside>
 
     <section class="chat-list">
-        <div class="list-header">Xenogram</div>
+        <div class="list-header">Xenogram Ultimate</div>
         <div class="social-bar">
             <button class="add-friend-btn" id="open-social">
                 👤 Добавить друга 
@@ -116,14 +118,18 @@
     <main class="chat-window">
         <header class="chat-header">
             <h3 id="chat-title" style="margin:0">Выберите чат</h3>
-            <div id="chat-actions"></div>
         </header>
         <div id="messages-display"></div>
         <div id="message-form-container">
-            <div id="typing-text">печатает...</div>
-            <input type="text" id="message-input" placeholder="Напишите сообщение..." disabled>
+            <div id="typing-indicator">печатает...</div>
+            <input type="text" id="message-input" placeholder="Напишите сообщение..." disabled autocomplete="off">
         </div>
     </main>
+</div>
+
+<div id="msg-context-menu" class="msg-actions">
+    <button onclick="prepEditMsg()">Изменить</button>
+    <button onclick="deleteMsg()" style="color:var(--danger)">Удалить</button>
 </div>
 
 <div id="modal-social" class="modal">
@@ -137,24 +143,34 @@
         <div class="modal-main">
             <div id="view-add">
                 <h3>Добавить по UID</h3>
-                <input type="text" id="search-uid-inp" placeholder="Вставьте UID...">
+                <input type="text" id="search-uid-inp" placeholder="Вставьте UID друга...">
                 <button class="btn" id="send-req-btn" style="width:100%; margin-top:15px">Отправить запрос</button>
                 <div style="margin-top:25px; font-size:12px; color:var(--text-dim)">
-                    Ваш UID (нажмите, чтобы скопировать):
-                    <div id="my-uid-display" style="background:#111; padding:10px; border-radius:5px; margin-top:5px; cursor:pointer; font-family:monospace; color:var(--accent)">загрузка...</div>
+                    Твой UID (кликни, чтобы скопировать):
+                    <div id="my-uid-val" style="background:#111; padding:12px; border-radius:8px; margin-top:8px; cursor:pointer; font-family:monospace; color:var(--accent); text-align:center">...</div>
                 </div>
             </div>
             <div id="view-req" style="display:none">
-                <h3>Входящие заявки</h3>
+                <h3>Входящие приглашения</h3>
                 <div id="req-list-items"></div>
             </div>
             <div id="view-grp" style="display:none">
-                <h3>Создать группу</h3>
-                <input type="text" id="new-grp-name" placeholder="Название беседы">
-                <div id="grp-select-list" style="margin:15px 0; max-height:200px; overflow-y:auto"></div>
-                <button class="btn" id="create-grp-btn" style="width:100%">Создать</button>
+                <h3>Создать групповой чат</h3>
+                <input type="text" id="grp-name-inp" placeholder="Название группы">
+                <div id="grp-friends-list" style="margin:15px 0; max-height:200px; overflow-y:auto"></div>
+                <button class="btn" id="create-grp-btn" style="width:100%">Создать группу</button>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="modal-settings" class="modal">
+    <div class="modal-content" style="height:auto; width:400px; padding:25px; flex-direction:column">
+        <h3>Настройки профиля</h3>
+        <input type="text" id="set-nick" placeholder="Твой ник">
+        <input type="text" id="set-ava" placeholder="Ссылка на аватар (URL)" style="margin-top:12px">
+        <button class="btn" id="save-prof-btn" style="margin-top:20px">Сохранить изменения</button>
+        <button class="btn" onclick="closeModals()" style="margin-top:10px; background:#444">Отмена</button>
     </div>
 </div>
 
@@ -176,51 +192,50 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentChatId = null, myData = null, unsubMessages = null;
+    let currentChatId = null, myData = null, unsubMsg = null, selectedMsgId = null, isEditing = false;
 
     onAuthStateChanged(auth, (user) => {
         if (!user) window.location.href = "auth.html";
         else {
-            document.getElementById('my-uid-display').innerText = user.uid;
+            document.getElementById('my-uid-val').innerText = user.uid;
             updateDoc(doc(db, "users", user.uid), { isOnline: true });
-            listenUserData(user.uid);
+            initRealtime(user.uid);
         }
     });
 
-    function listenUserData(uid) {
+    function initRealtime(uid) {
         onSnapshot(doc(db, "users", uid), async (snap) => {
-            myData = snap.data();
-            if(!myData) return;
+            myData = snap.data(); if(!myData) return;
 
-            // 1. Обновляем счетчик заявок
+            // Бейдж
             const reqs = myData.requests || [];
             const badge = document.getElementById('global-req-badge');
             badge.innerText = reqs.length;
             badge.style.display = reqs.length > 0 ? "block" : "none";
 
-            // 2. Список друзей и групп
+            // Рендер друзей и групп
             const container = document.getElementById('friends-container');
-            container.innerHTML = "";
+            const grpList = document.getElementById('grp-friends-list');
+            container.innerHTML = ""; grpList.innerHTML = "";
 
-            // Рендер групп
+            // Группы
             for(const gid of (myData.groups || [])) {
                 const gSnap = await getDoc(doc(db, "chats", gid));
-                if(gSnap.exists()) {
-                    renderFriendItem(gid, gSnap.data().groupName, true, false);
-                }
+                if(gSnap.exists()) renderListItem(gid, gSnap.data().groupName, true, false);
             }
-            // Рендер друзей
+            // Друзья
             for(const fid of (myData.friends || [])) {
                 const fSnap = await getDoc(doc(db, "users", fid));
                 if(fSnap.exists()) {
                     const f = fSnap.data();
-                    renderFriendItem(fid, f.username, false, f.isOnline, f.avatar);
+                    renderListItem(fid, f.username, false, f.isOnline, f.avatar);
+                    grpList.innerHTML += `<label style="display:block; margin:5px 0"><input type="checkbox" value="${fid}"> ${f.username}</label>`;
                 }
             }
 
-            // 3. Рендер заявок в модалке
-            const reqList = document.getElementById('req-list-items');
-            reqList.innerHTML = reqs.length === 0 ? "<p>Нет новых заявок</p>" : "";
+            // Рендер заявок
+            const rListItems = document.getElementById('req-list-items');
+            rListItems.innerHTML = reqs.length === 0 ? "<p style='color:var(--text-dim)'>Заявок пока нет</p>" : "";
             for(const rid of reqs) {
                 const rSnap = await getDoc(doc(db, "users", rid));
                 if(rSnap.exists()) {
@@ -229,114 +244,151 @@
                     div.className = "friend-item";
                     div.style.justifyContent = "space-between";
                     div.innerHTML = `<span>${rData.username}</span> 
-                        <div style="display:flex; gap:5px">
-                            <button class="btn" style="padding:5px 10px" onclick="acceptFriend('${rid}')">✅</button>
-                            <button class="btn" style="padding:5px 10px; background:var(--danger)" onclick="rejectFriend('${rid}')">❌</button>
+                        <div style="display:flex; gap:10px">
+                            <button class="btn" style="padding:5px 12px; background:var(--online)" onclick="acceptFriend('${rid}')">Принять</button>
+                            <button class="btn" style="padding:5px 12px; background:var(--danger)" onclick="rejectFriend('${rid}')">Отклонить</button>
                         </div>`;
-                    reqList.appendChild(div);
+                    rListItems.appendChild(div);
                 }
             }
         });
     }
 
-    function renderFriendItem(id, name, isGroup, isOnline, avatar) {
-        const cont = document.getElementById('friends-container');
+    function renderListItem(id, name, isGroup, isOnline, avatar) {
+        const container = document.getElementById('friends-container');
         const div = document.createElement('div');
         div.className = "friend-item";
         div.innerHTML = `
             <div class="avatar-circle" style="background-image: ${avatar ? `url(${avatar})` : 'none'}">
                 ${avatar ? '' : name[0]}
                 ${isOnline ? '<div class="online-status"></div>' : ''}
+                ${isGroup ? '<div style="font-size:10px">GRP</div>' : ''}
             </div>
             <span class="friend-name-text">${name}</span>
             <div class="friend-controls">
-                <button class="ctrl-btn" onclick="viewProfile('${id}')">👤</button>
-                <button class="ctrl-btn del" onclick="removeFriend('${id}', ${isGroup})">🗑️</button>
+                <button class="ctrl-btn" onclick="viewProfile('${id}', ${isGroup})">👤</button>
+                <button class="ctrl-btn del" onclick="removeEntity('${id}', ${isGroup})">🗑️</button>
             </div>
         `;
-        div.onclick = (e) => {
-            if(!e.target.classList.contains('ctrl-btn')) startChat(id, name, isGroup);
-        };
-        cont.appendChild(div);
+        div.onclick = (e) => { if(!e.target.closest('.ctrl-btn')) startChat(id, name, isGroup); };
+        container.appendChild(div);
     }
 
-    // ЛОГИКА СОЦИАЛКИ
-    document.getElementById('send-req-btn').onclick = async () => {
-        const targetUid = document.getElementById('search-uid-inp').value.trim();
-        if(!targetUid || targetUid === auth.currentUser.uid) return alert("Некорректный UID");
-        try {
-            await updateDoc(doc(db, "users", targetUid), { requests: arrayUnion(auth.currentUser.uid) });
-            alert("Запрос отправлен!");
-            document.getElementById('search-uid-inp').value = "";
-        } catch(e) { alert("Ошибка: пользователь не найден"); }
+    // ЧАТ И СООБЩЕНИЯ
+    window.startChat = (id, name, isGroup) => {
+        currentChatId = isGroup ? id : [auth.currentUser.uid, id].sort().join('_');
+        document.getElementById('chat-title').innerText = name;
+        const inp = document.getElementById('message-input');
+        inp.disabled = false; inp.focus();
+        
+        if(unsubMsg) unsubMsg();
+        const q = query(collection(db, "chats", currentChatId, "messages"), orderBy("createdAt", "asc"));
+        unsubMsg = onSnapshot(q, (snap) => {
+            const display = document.getElementById('messages-display');
+            display.innerHTML = "";
+            snap.forEach(mDoc => {
+                const m = mDoc.data(); const mine = m.uid === auth.currentUser.uid;
+                const div = document.createElement('div');
+                div.className = `msg ${mine ? 'mine' : 'theirs'}`;
+                div.innerHTML = `<div class="msg-meta">${m.sender}</div><div>${m.text}</div>`;
+                if(mine) div.onclick = (e) => showMsgActions(e, mDoc.id, m.text);
+                display.appendChild(div);
+            });
+            display.scrollTop = display.scrollHeight;
+        });
     };
 
+    // АНТИ-ЧЕРВЯК (ВАЛИДАЦИЯ)
+    document.getElementById('message-input').onkeydown = async (e) => {
+        const inp = e.target;
+        if(e.key === "Enter") {
+            const val = inp.value.trim();
+            if(!val) return; // Пустые сообщения не пройдут
+            inp.value = "";
+            if(isEditing) {
+                await updateDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId), { text: val });
+                isEditing = false;
+            } else {
+                await addDoc(collection(db, "chats", currentChatId, "messages"), {
+                    text: val, uid: auth.currentUser.uid, sender: myData.username, createdAt: serverTimestamp()
+                });
+            }
+        }
+    };
+
+    // СОЦИАЛЬНЫЕ ФУНКЦИИ
     window.acceptFriend = async (rid) => {
-        const myUid = auth.currentUser.uid;
-        await updateDoc(doc(db, "users", myUid), { requests: arrayRemove(rid), friends: arrayUnion(rid) });
-        await updateDoc(doc(db, "users", rid), { friends: arrayUnion(myUid) });
+        const my = auth.currentUser.uid;
+        await updateDoc(doc(db, "users", my), { requests: arrayRemove(rid), friends: arrayUnion(rid) });
+        await updateDoc(doc(db, "users", rid), { friends: arrayUnion(my) });
     };
 
     window.rejectFriend = async (rid) => {
         await updateDoc(doc(db, "users", auth.currentUser.uid), { requests: arrayRemove(rid) });
     };
 
-    window.removeFriend = async (id, isGroup) => {
-        if(!confirm("Удалить из списка?")) return;
+    window.removeEntity = async (id, isGroup) => {
+        if(!confirm("Удалить?")) return;
         const field = isGroup ? "groups" : "friends";
         await updateDoc(doc(db, "users", auth.currentUser.uid), { [field]: arrayRemove(id) });
         if(!isGroup) await updateDoc(doc(db, "users", id), { friends: arrayRemove(auth.currentUser.uid) });
     };
 
-    window.viewProfile = async (id) => {
+    window.viewProfile = async (id, isGroup) => {
+        if(isGroup) return alert("Это групповой чат");
         const s = await getDoc(doc(db, "users", id));
-        if(s.exists()) alert(`Профиль: ${s.data().username}\nСтатус: ${s.data().isOnline ? 'В сети' : 'Оффлайн'}`);
+        if(s.exists()) alert(`Пользователь: ${s.data().username}\nUID: ${id}\nСтатус: ${s.data().isOnline ? 'В сети' : 'Оффлайн'}`);
     };
 
-    // ЧАТ
-    function startChat(id, name, isGroup) {
-        currentChatId = isGroup ? id : [auth.currentUser.uid, id].sort().join('_');
-        document.getElementById('chat-title').innerText = name;
-        document.getElementById('message-input').disabled = false;
-        
-        if(unsubMessages) unsubMessages();
-        const q = query(collection(db, "chats", currentChatId, "messages"), orderBy("createdAt", "asc"));
-        unsubMessages = onSnapshot(q, (snap) => {
-            const display = document.getElementById('messages-display');
-            display.innerHTML = "";
-            snap.forEach(mDoc => {
-                const m = mDoc.data();
-                const div = document.createElement('div');
-                div.className = `msg ${m.uid === auth.currentUser.uid ? 'mine' : 'theirs'}`;
-                div.innerText = m.text;
-                display.appendChild(div);
-            });
-            display.scrollTop = display.scrollHeight;
-        });
-    }
+    // МОДАЛКИ И ИНТЕРФЕЙС
+    window.openSettings = () => document.getElementById('modal-settings').style.display = 'flex';
+    window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    window.switchTab = (tab) => {
+        ['add','req','grp'].forEach(t => document.getElementById('view-'+t).style.display = (t===tab?'block':'none'));
+        ['t-add','t-req','t-grp'].forEach(t => document.getElementById(t).classList.toggle('active', t==='t-'+tab));
+    };
 
-    document.getElementById('message-input').onkeydown = async (e) => {
-        if(e.key === "Enter" && e.target.value.trim()) {
-            const txt = e.target.value; e.target.value = "";
-            await addDoc(collection(db, "chats", currentChatId, "messages"), {
-                text: txt, uid: auth.currentUser.uid, sender: myData.username, createdAt: serverTimestamp()
-            });
+    // КНОПКИ ДЕЙСТВИЙ
+    document.getElementById('open-social').onclick = () => { document.getElementById('modal-social').style.display = 'flex'; switchTab('add'); };
+    document.getElementById('send-req-btn').onclick = async () => {
+        const tid = document.getElementById('search-uid-inp').value.trim();
+        if(!tid || tid === auth.currentUser.uid) return alert("Неверный UID");
+        try {
+            await updateDoc(doc(db, "users", tid), { requests: arrayUnion(auth.currentUser.uid) });
+            alert("Запрос отправлен!");
+            document.getElementById('search-uid-inp').value = "";
+        } catch(e) { alert("Пользователь не найден"); }
+    };
+
+    document.getElementById('save-prof-btn').onclick = async () => {
+        const n = document.getElementById('set-nick').value.trim();
+        const a = document.getElementById('set-ava').value.trim();
+        if(n) {
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { username: n, avatar: a });
+            alert("Данные обновлены!"); closeModals();
         }
     };
 
-    // ИНТЕРФЕЙС
-    window.switchTab = (tab) => {
-        ['add','req','grp'].forEach(t => document.getElementById('view-'+t).style.display = t === tab ? 'block' : 'none');
-        ['t-add','t-req','t-grp'].forEach(t => document.getElementById(t).classList.toggle('active', t === 't-'+tab));
+    // РЕДАКТИРОВАНИЕ СООБЩЕНИЙ
+    window.showMsgActions = (e, id, text) => {
+        e.stopPropagation(); selectedMsgId = id; window.curMsgText = text;
+        const menu = document.getElementById('msg-context-menu');
+        menu.style.display = 'block'; menu.style.top = e.pageY + 'px'; menu.style.left = e.pageX + 'px';
+    };
+    window.hideMsgActions = () => document.getElementById('msg-context-menu').style.display = 'none';
+    window.prepEditMsg = () => {
+        isEditing = true; 
+        const inp = document.getElementById('message-input');
+        inp.value = window.curMsgText; inp.focus();
+    };
+    window.deleteMsg = async () => {
+        if(confirm("Удалить сообщение?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId));
     };
 
-    document.getElementById('open-social').onclick = () => document.getElementById('modal-social').style.display = 'flex';
-    window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    document.getElementById('my-uid-display').onclick = () => {
+    document.getElementById('my-uid-val').onclick = () => {
         navigator.clipboard.writeText(auth.currentUser.uid);
         alert("UID скопирован!");
     };
-    document.getElementById('logout-btn').onclick = () => signOut(auth);
 </script>
 </body>
 </html>
