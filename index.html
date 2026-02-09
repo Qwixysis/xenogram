@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xenogram Ultimate - Jarvis Edition</title>
+    <title>Xenogram Ultimate</title>
     <style>
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
@@ -14,28 +14,29 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
 
-        .app-container { display: flex; height: 100vh; width: 100vw; }
+        .app-container { display: flex; height: 100vh; width: 100vw; position: relative; }
 
         /* НАВИГАЦИЯ */
-        .side-nav { width: 72px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; }
+        .side-nav { width: 72px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; z-index: 10; }
         .nav-icon { 
             width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; 
             cursor: pointer; display: flex; align-items: center; justify-content: center; 
-            transition: 0.2s; font-size: 22px; position: relative;
+            transition: 0.2s; font-size: 22px;
         }
         .nav-icon:hover { border-radius: 15px; background: var(--accent); }
 
         /* СПИСОК ЧАТОВ */
-        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #000; display: flex; flex-direction: column; transition: 0.3s; }
-        .list-header { padding: 20px; font-weight: 800; font-size: 18px; border-bottom: 1px solid #111; }
+        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #000; display: flex; flex-direction: column; transition: 0.3s; z-index: 5; }
+        .list-header { padding: 20px; font-weight: 800; font-size: 18px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
+        
         .social-bar { padding: 15px; }
         .add-friend-btn { 
             width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; 
-            color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; position: relative;
+            color: #fff; font-weight: 600; cursor: pointer; position: relative;
         }
         .req-badge { background: var(--danger); font-size: 11px; padding: 2px 7px; border-radius: 10px; position: absolute; top: -5px; right: -5px; border: 2px solid var(--bg-side); }
 
-        #chats-container { overflow-y: auto; flex-grow: 1; padding: 10px 0; }
+        #chats-container { overflow-y: auto; flex-grow: 1; }
         .chat-item { 
             padding: 12px 15px; margin: 2px 10px; border-radius: 8px; cursor: pointer; display: flex; 
             align-items: center; gap: 12px; transition: 0.2s;
@@ -44,39 +45,49 @@
         .chat-item.active { background: rgba(114, 137, 218, 0.2); color: var(--accent); }
         
         /* ОКНО ЧАТА */
-        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); }
-        .chat-header { height: 64px; padding: 0 20px; display: flex; align-items: center; border-bottom: 1px solid #111; background: var(--bg-side); }
-        #messages-display { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        
-        .msg { display: flex; gap: 12px; max-width: 85%; animation: fadeIn 0.2s; padding: 8px; border-radius: 6px; }
-        .msg-content { display: flex; flex-direction: column; }
-        .msg-author { font-weight: 700; font-size: 14px; color: var(--accent); }
-        .msg-time { font-size: 10px; color: var(--text-dim); margin-left: 8px; }
-        .msg-text { font-size: 15px; color: #dcddde; margin-top: 2px; word-break: break-word; }
-        .msg.mine { background: rgba(114, 137, 218, 0.05); }
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); transition: 0.3s; position: relative; }
+        .chat-header { height: 64px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid #111; background: var(--bg-side); gap: 10px; }
+        .back-btn { display: none; font-size: 20px; cursor: pointer; padding: 5px; }
+        #chat-title-container { flex-grow: 1; cursor: pointer; }
 
-        .input-area { padding: 20px; }
-        .input-box { background: #40444b; border-radius: 8px; display: flex; align-items: center; padding: 10px 15px; }
-        input#message-input { background: transparent; border: none; color: #fff; flex-grow: 1; font-size: 15px; }
+        #messages-display { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        
+        .msg { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.2s; padding: 8px 12px; border-radius: 12px; background: #2f3136; position: relative; width: fit-content; }
+        .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
+        .msg:not(.mine) { align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        .msg-info { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 2px; }
+        .msg-author { font-weight: 700; font-size: 12px; color: #eee; }
+        .msg-time { font-size: 10px; opacity: 0.6; }
+        .msg-text { font-size: 15px; line-height: 1.4; }
+
+        .input-area { padding: 15px; background: var(--bg-main); }
+        .input-box { background: #40444b; border-radius: 8px; display: flex; align-items: center; padding: 5px 12px; }
+        input#message-input { background: transparent; border: none; color: #fff; flex-grow: 1; height: 40px; font-size: 15px; }
 
         /* МОДАЛКИ */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-content { background: var(--bg-side); width: 400px; padding: 25px; border-radius: 12px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--bg-side); width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; }
         .modal-input { background: #1e1e1e; border: 1px solid #111; color: #fff; padding: 12px; width: 100%; border-radius: 5px; margin: 10px 0; }
-        .btn { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; }
+        .btn { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
         .btn-primary { background: var(--accent); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
 
-        .avatar { width: 38px; height: 38px; border-radius: 50%; background: #4f545c; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; background-size: cover; position: relative; }
-
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #4f545c; display: flex; align-items: center; justify-content: center; font-weight: bold; background-size: cover; background-position: center; flex-shrink: 0; }
         .ctx-menu { display: none; position: absolute; background: #18191c; border-radius: 5px; padding: 5px; z-index: 2000; border: 1px solid #000; min-width: 150px; }
-        .ctx-menu button { width: 100%; text-align: left; background: none; border: none; color: #b9bbbe; padding: 10px; cursor: pointer; }
+        .ctx-menu button { width: 100%; text-align: left; background: none; border: none; color: #b9bbbe; padding: 10px; cursor: pointer; border-radius: 3px; }
         .ctx-menu button:hover { background: var(--accent); color: #fff; }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* АДАПТАЦИЯ */
         @media (max-width: 768px) {
-            .chat-list { position: absolute; left: -300px; z-index: 100; height: 100%; }
-            .chat-list.open { left: 72px; }
+            .side-nav { width: 60px; }
+            .chat-list { width: calc(100vw - 60px); position: absolute; left: 60px; height: 100%; }
+            .chat-list.hidden { left: -100%; }
+            .chat-window { position: absolute; left: 60px; width: calc(100vw - 60px); height: 100%; z-index: 1; }
+            .chat-window.hidden { left: 100%; }
+            .back-btn { display: block; }
         }
     </style>
 </head>
@@ -84,7 +95,7 @@
 
 <div class="app-container">
     <aside class="side-nav">
-        <div class="nav-icon" onclick="toggleSidebar()">💬</div>
+        <div class="nav-icon" onclick="showList()">💬</div>
         <div class="nav-icon" onclick="openSettings()">⚙️</div>
         <div style="flex-grow: 1;"></div>
         <div class="nav-icon" id="logout-btn" style="color:var(--danger)">🚪</div>
@@ -101,47 +112,53 @@
         <div id="chats-container"></div>
     </section>
 
-    <main class="chat-window">
+    <main class="chat-window hidden" id="chat-view">
         <header class="chat-header">
-            <div id="chat-title" style="font-weight: 700; color: var(--text-dim)">Выберите чат</div>
+            <div class="back-btn" onclick="showList()">⬅️</div>
+            <div id="chat-title-container" onclick="viewFriendProfile()">
+                <div id="chat-title" style="font-weight: 700;">Выберите чат</div>
+                <div id="chat-status" style="font-size: 11px; color: var(--text-dim);">нажмите сюда для профиля</div>
+            </div>
         </header>
         <div id="messages-display"></div>
         <div class="input-area">
             <div class="input-box">
-                <input type="text" id="message-input" placeholder="Написать сообщение..." disabled autocomplete="off">
+                <input type="text" id="message-input" placeholder="Сообщение..." disabled autocomplete="off">
             </div>
         </div>
     </main>
 </div>
 
-<div id="modal-social" class="modal">
-    <div class="modal-content">
-        <h3>Социальный центр</h3>
-        <p style="font-size: 11px; color: var(--text-dim)">Ваш UID (нажми чтобы скопировать):<br>
-            <span id="my-uid" style="color:var(--accent); cursor:pointer; font-family:monospace">Загрузка...</span>
-        </p>
-        
-        <label style="font-size: 12px; font-weight: bold; color: var(--text-dim)">ДОБАВИТЬ ПО UID</label>
-        <div style="display:flex; gap:10px">
-            <input type="text" id="search-uid" class="modal-input" placeholder="Вставьте UID...">
-            <button class="btn btn-primary" onclick="sendRequest()">Найти</button>
-        </div>
+<div id="modal-social" class="modal"><div class="modal-content">
+    <h3>Социальный центр</h3>
+    <p style="font-size: 11px; color: var(--text-dim)">Твой ID (нажми скопировать):<br>
+    <span id="my-uid" style="color:var(--accent); cursor:pointer; font-family:monospace" onclick="copyMyId()">...</span></p>
+    <input type="text" id="search-uid" class="modal-input" placeholder="Вставьте UID друга...">
+    <button class="btn btn-primary" onclick="sendRequest()">Добавить</button>
+    <div id="request-list" style="margin-top:15px; max-height: 150px; overflow-y: auto"></div>
+    <button class="btn" onclick="closeModals()">Закрыть</button>
+</div></div>
 
-        <label style="font-size: 12px; font-weight: bold; color: var(--text-dim); margin-top: 20px; display: block">ВХОДЯЩИЕ ЗАЯВКИ</label>
-        <div id="request-list" style="margin-top:10px; max-height: 150px; overflow-y: auto"></div>
-        
-        <button class="btn" onclick="closeModals()" style="width:100%; margin-top:20px; background:#4f545c; color:#fff">Закрыть</button>
+<div id="modal-settings" class="modal"><div class="modal-content">
+    <h3>Мой профиль</h3>
+    <div id="my-profile-info" style="text-align:center; margin-bottom:15px">
+        <div id="my-avatar-view" class="avatar" style="width:60px; height:60px; margin: 0 auto 10px"></div>
+        <div id="my-name-view" style="font-weight:bold; font-size:18px"></div>
     </div>
-</div>
+    <label style="font-size:12px; color:var(--text-dim)">ИЗМЕНИТЬ ДАННЫЕ:</label>
+    <input type="text" id="set-name" class="modal-input" placeholder="Имя">
+    <input type="text" id="set-avatar" class="modal-input" placeholder="URL аватара">
+    <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
+    <button class="btn" onclick="closeModals()">Назад</button>
+</div></div>
 
-<div id="modal-settings" class="modal">
-    <div class="modal-content">
-        <h3>Настройки профиля</h3>
-        <input type="text" id="set-name" class="modal-input" placeholder="Ваше имя">
-        <input type="text" id="set-avatar" class="modal-input" placeholder="URL аватара">
-        <button class="btn btn-primary" onclick="saveSettings()" style="width:100%">Сохранить</button>
-    </div>
-</div>
+<div id="modal-friend" class="modal"><div class="modal-content">
+    <h3 id="f-name-title">Профиль друга</h3>
+    <div id="f-avatar-view" class="avatar" style="width:80px; height:80px; margin: 0 auto 15px"></div>
+    <p id="f-uid-view" style="font-size:10px; text-align:center; color:var(--text-dim)"></p>
+    <button class="btn btn-danger" onclick="deleteFriend()">Удалить из друзей</button>
+    <button class="btn" onclick="closeModals()">Закрыть</button>
+</div></div>
 
 <div id="msg-ctx" class="ctx-menu">
     <button onclick="editMsg()">✏️ Изменить</button>
@@ -166,88 +183,79 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let u = null, myData = null, curChatId = null, unsubMsg = null, editingId = null;
+    let u = null, myData = null, curChatId = null, unsubMsg = null, editingId = null, curFriendId = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) window.location.href = "auth.html";
         else { 
             u = user; 
             document.getElementById('my-uid').innerText = u.uid;
-            
-            // Инициализация профиля
-            const userRef = doc(db, "users", u.uid);
-            const userSnap = await getDoc(userRef);
-            if(!userSnap.exists()) {
-                await setDoc(userRef, { username: "User_" + u.uid.slice(0,4), friends: [], requests: [], avatar: "" }, { merge: true });
-            }
+            const uRef = doc(db, "users", u.uid);
+            const uSnap = await getDoc(uRef);
+            if(!uSnap.exists()) await setDoc(uRef, { username: "User_" + u.uid.slice(0,4), friends: [], requests: [], avatar: "" }, { merge: true });
             startListeners(); 
         }
     });
 
     function startListeners() {
-        // Слушаем заявки
         onSnapshot(doc(db, "users", u.uid), async (snap) => {
             myData = snap.data();
-            if (!myData) return;
-            const reqs = myData.requests || [];
-            document.getElementById('global-badge').innerText = reqs.length;
-            document.getElementById('global-badge').style.display = reqs.length > 0 ? "block" : "none";
-            
             const rList = document.getElementById('request-list');
             rList.innerHTML = "";
-            for(let rid of reqs) {
+            (myData.requests || []).forEach(async rid => {
                 const rs = await getDoc(doc(db, "users", rid));
-                const rd = rs.data();
-                rList.innerHTML += `<div style="display:flex; justify-content:space-between; background:#2f3136; padding:10px; border-radius:5px; margin-bottom:5px">
-                    <span>${rd?.username || rid.slice(0,5)}</span>
-                    <button onclick="acceptFriend('${rid}')" style="background:var(--online); border:none; color:#fff; padding:5px; border-radius:3px; cursor:pointer">Принять</button>
+                rList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; margin-top:5px; border-radius:5px">
+                    <span>${rs.data()?.username || 'User'}</span>
+                    <button onclick="acceptFriend('${rid}')" style="background:var(--online); color:#fff; border:none; padding:5px 10px; border-radius:3px">ОК</button>
                 </div>`;
-            }
+            });
+            document.getElementById('global-badge').style.display = (myData.requests?.length > 0) ? 'block' : 'none';
+            document.getElementById('global-badge').innerText = myData.requests?.length || 0;
         });
 
-        // Слушаем чаты (Исправлено: простая прослушка коллекции)
         const qChats = query(collection(db, "chats"), where("users", "array-contains", u.uid));
         onSnapshot(qChats, async (snap) => {
-            const container = document.getElementById('chats-container');
-            container.innerHTML = "";
-            
+            const cont = document.getElementById('chats-container');
+            cont.innerHTML = "";
             for(let d of snap.docs) {
-                const chat = d.data();
-                const otherId = chat.users.find(id => id !== u.uid);
+                const otherId = d.data().users.find(id => id !== u.uid);
                 const otherSnap = await getDoc(doc(db, "users", otherId));
-                const otherData = otherSnap.exists() ? otherSnap.data() : { username: "Друг" };
-                
+                const oData = otherSnap.data() || { username: "Друг" };
                 const div = document.createElement('div');
                 div.className = "chat-item" + (curChatId === d.id ? " active" : "");
-                div.innerHTML = `<div class="avatar" style="background-image:url(${otherData.avatar || ''})">${otherData.avatar ? '' : otherData.username[0]}</div>
-                                 <div style="font-weight:600">${otherData.username}</div>`;
-                div.onclick = () => openChat(d.id, otherData.username);
-                container.appendChild(div);
+                div.innerHTML = `<div class="avatar" style="background-image:url(${oData.avatar})">${oData.avatar?'':oData.username[0]}</div>
+                                 <div style="font-weight:600">${oData.username}</div>`;
+                div.onclick = () => openChat(d.id, otherId, oData.username);
+                cont.appendChild(div);
             }
         });
     }
 
-    async function openChat(chatId, name) {
-        curChatId = chatId;
+    async function openChat(chatId, friendId, name) {
+        curChatId = chatId; curFriendId = friendId;
         document.getElementById('chat-title').innerText = name;
         document.getElementById('message-input').disabled = false;
         
+        if(window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('chat-view').classList.remove('hidden');
+        }
+
         if(unsubMsg) unsubMsg();
         const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
         unsubMsg = onSnapshot(q, (snap) => {
-            const display = document.getElementById('messages-display');
-            display.innerHTML = "";
+            const disp = document.getElementById('messages-display');
+            disp.innerHTML = "";
             snap.forEach(doc => {
                 const m = doc.data();
                 const isMine = m.uid === u.uid;
-                display.innerHTML += `<div class="msg ${isMine?'mine':''}" oncontextmenu="window.prepareCtx(event, '${doc.id}', '${m.text}', ${isMine})">
-                    <div class="msg-content">
-                        <div class="msg-author">${m.sender}</div>
-                        <div class="msg-text">${m.text}</div>
-                    </div>
+                const time = m.createdAt ? new Date(m.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
+                disp.innerHTML += `<div class="msg ${isMine?'mine':''}" oncontextmenu="window.prepareCtx(event, '${doc.id}', '${m.text}', ${isMine})">
+                    <div class="msg-info"><span class="msg-author">${isMine?'Вы':m.sender}</span><span class="msg-time">${time}</span></div>
+                    <div class="msg-text">${m.text}</div>
                 </div>`;
             });
-            display.scrollTop = display.scrollHeight;
+            disp.scrollTop = disp.scrollHeight;
         });
     }
 
@@ -258,41 +266,70 @@
                 await updateDoc(doc(db, "chats", curChatId, "messages", editingId), { text: val });
                 editingId = null;
             } else {
-                await addDoc(collection(db, "chats", curChatId, "messages"), {
-                    text: val, uid: u.uid, sender: myData.username, createdAt: serverTimestamp()
-                });
+                await addDoc(collection(db, "chats", curChatId, "messages"), { text: val, uid: u.uid, sender: myData.username, createdAt: serverTimestamp() });
             }
         }
-    }
+    };
 
     window.sendRequest = async () => {
         const tid = document.getElementById('search-uid').value.trim();
-        if(!tid || tid === u.uid) return alert("ID неверен");
-        try {
-            await setDoc(doc(db, "users", tid), { requests: arrayUnion(u.uid) }, { merge: true });
-            alert("Заявка отправлена!");
-            closeModals();
-        } catch(e) { alert("Ошибка! Проверь Firestore Rules"); }
-    }
+        if(!tid || tid === u.uid) return alert("Неверный UID");
+        await setDoc(doc(db, "users", tid), { requests: arrayUnion(u.uid) }, { merge: true });
+        alert("Запрос отправлен!"); closeModals();
+    };
 
     window.acceptFriend = async (rid) => {
         await updateDoc(doc(db, "users", u.uid), { friends: arrayUnion(rid), requests: arrayRemove(rid) });
         await updateDoc(doc(db, "users", rid), { friends: arrayUnion(u.uid) });
         const cid = [u.uid, rid].sort().join('_');
-        await setDoc(doc(db, "chats", cid), { users: [u.uid, rid], lastUpdate: serverTimestamp() }, { merge: true });
-    }
+        await setDoc(doc(db, "chats", cid), { users: [u.uid, rid] }, { merge: true });
+    };
 
-    window.prepareCtx = (e, id, txt, mine) => { if(!mine) return; e.preventDefault(); editingId = id; window.tempText = txt; const m = document.getElementById('msg-ctx'); m.style.display='block'; m.style.left=e.pageX+'px'; m.style.top=e.pageY+'px'; }
-    window.editMsg = () => { document.getElementById('message-input').value = window.tempText; document.getElementById('message-input').focus(); }
-    window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", curChatId, "messages", editingId)); }
-    window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
-    window.openSocial = () => document.getElementById('modal-social').style.display = 'flex';
-    window.openSettings = () => { document.getElementById('modal-settings').style.display = 'flex'; document.getElementById('set-name').value = myData.username; }
-    window.saveSettings = async () => { await updateDoc(doc(db, "users", u.uid), { username: document.getElementById('set-name').value, avatar: document.getElementById('set-avatar').value }); closeModals(); }
+    window.viewFriendProfile = async () => {
+        if(!curFriendId) return;
+        const snap = await getDoc(doc(db, "users", curFriendId));
+        const d = snap.data();
+        document.getElementById('f-name-title').innerText = d.username;
+        document.getElementById('f-uid-view').innerText = "UID: " + curFriendId;
+        document.getElementById('f-avatar-view').style.backgroundImage = `url(${d.avatar})`;
+        document.getElementById('f-avatar-view').innerText = d.avatar ? '' : d.username[0];
+        document.getElementById('modal-friend').style.display = 'flex';
+    };
+
+    window.deleteFriend = async () => {
+        if(!confirm("Удалить друга и чат?")) return;
+        await updateDoc(doc(db, "users", u.uid), { friends: arrayRemove(curFriendId) });
+        await updateDoc(doc(db, "users", curFriendId), { friends: arrayRemove(u.uid) });
+        await deleteDoc(doc(db, "chats", curChatId));
+        location.reload();
+    };
+
+    window.openSettings = () => {
+        document.getElementById('my-name-view').innerText = myData.username;
+        document.getElementById('my-avatar-view').style.backgroundImage = `url(${myData.avatar})`;
+        document.getElementById('my-avatar-view').innerText = myData.avatar ? '' : myData.username[0];
+        document.getElementById('set-name').value = myData.username;
+        document.getElementById('set-avatar').value = myData.avatar;
+        document.getElementById('modal-settings').style.display = 'flex';
+    };
+
+    window.saveSettings = async () => {
+        await updateDoc(doc(db, "users", u.uid), { username: document.getElementById('set-name').value, avatar: document.getElementById('set-avatar').value });
+        closeModals();
+    };
+
+    window.showList = () => {
+        document.getElementById('sidebar').classList.remove('hidden');
+        document.getElementById('chat-view').classList.add('hidden');
+    };
+
+    window.prepareCtx = (e, id, txt, mine) => { if(!mine) return; e.preventDefault(); editingId = id; window.tempText = txt; const m = document.getElementById('msg-ctx'); m.style.display='block'; m.style.left=e.pageX+'px'; m.style.top=e.pageY+'px'; };
+    window.editMsg = () => { document.getElementById('message-input').value = window.tempText; document.getElementById('message-input').focus(); };
+    window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", curChatId, "messages", editingId)); };
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display='none');
     window.hideContext = () => document.getElementById('msg-ctx').style.display='none';
+    window.copyMyId = () => { navigator.clipboard.writeText(u.uid); alert("ID скопирован!"); };
     document.getElementById('logout-btn').onclick = () => signOut(auth);
-    document.getElementById('my-uid').onclick = () => { navigator.clipboard.writeText(u.uid); alert("ID скопирован"); }
 </script>
 </body>
 </html>
