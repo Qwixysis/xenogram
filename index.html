@@ -263,7 +263,7 @@
                 }
             }
 
-            // Запросы (ИСПРАВЛЕННЫЙ БЛОК)
+            // Запросы
             const rCont = document.getElementById('req-list'); 
             rCont.innerHTML = "";
             const requests = data.requests || [];
@@ -420,26 +420,29 @@
         }
     };
 
-    // ДОБАВЛЕНИЕ С ПРОВЕРКОЙ (ИСПРАВЛЕНО)
+    // ОТРЕМОНТИРОВАННЫЙ ФУНКЦИОНАЛ ЗАЯВОК
     document.getElementById('btn-send-req').onclick = async () => {
-        const id = document.getElementById('search-uid').value.trim();
-        if(!id) { alert("Введите UID"); return; }
-        if(id === auth.currentUser.uid) { alert("Это ваш UID"); return; }
+        const targetUid = document.getElementById('search-uid').value.trim();
+        if(!targetUid) { alert("Введите UID"); return; }
+        if(targetUid === auth.currentUser.uid) { alert("Это ваш собственный UID"); return; }
         
         try {
-            const userRef = doc(db, "users", id);
+            // Прямая попытка получить документ. Если его нет - выкинет в catch или вернет exists() false
+            const userRef = doc(db, "users", targetUid);
             const userSnap = await getDoc(userRef);
             
-            if(!userSnap.exists()) { 
-                alert("Пользователь не найден"); 
-                return; 
+            if(userSnap.exists()) { 
+                await updateDoc(userRef, { 
+                    requests: arrayUnion(auth.currentUser.uid) 
+                });
+                alert("Запрос успешно отправлен!");
+                document.getElementById('search-uid').value = "";
+            } else {
+                alert("Пользователь с таким UID не найден в базе.");
             }
-            
-            await updateDoc(userRef, { requests: arrayUnion(auth.currentUser.uid) });
-            alert("Запрос отправлен!");
-            document.getElementById('search-uid').value = "";
         } catch(e) {
-            alert("Ошибка в UID");
+            console.error("Ошибка при поиске:", e);
+            alert("Ошибка: Неверный формат UID или нет прав доступа.");
         }
     };
 
