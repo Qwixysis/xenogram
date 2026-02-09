@@ -129,9 +129,9 @@
 <div id="modal-social" class="modal">
     <div class="modal-content">
         <div class="modal-sidebar">
-            <div class="modal-tab active" onclick="switchSocial('add')">Поиск</div>
-            <div class="modal-tab" onclick="switchSocial('req')">Запросы</div>
-            <div class="modal-tab" onclick="switchSocial('grp')">Группа</div>
+            <div class="modal-tab active" onclick="window.switchSocial('add')">Поиск</div>
+            <div class="modal-tab" onclick="window.switchSocial('req')">Запросы</div>
+            <div class="modal-tab" onclick="window.switchSocial('grp')">Группа</div>
             <button class="btn" onclick="closeModals()">X</button>
         </div>
         <div class="modal-main" id="view-add">
@@ -217,7 +217,7 @@
                 if(gDoc.exists()){
                     const d = document.createElement('div'); d.className = 'friend-item';
                     d.innerHTML = `<div class="avatar-circle" style="background:var(--accent-alt)">G</div><span>${gDoc.data().groupName}</span>`;
-                    d.onclick = () => startChat(gId, gDoc.data().groupName, true);
+                    d.onclick = () => window.startChat(gId, gDoc.data().groupName, true);
                     fCont.appendChild(d);
                 }
             }
@@ -280,7 +280,7 @@
                 const mDiv = document.createElement('div');
                 mDiv.className = `msg ${mine?'mine':'theirs'}`;
                 mDiv.innerHTML = `<div class="msg-meta">${m.sender}${m.edited?'<span class="edited-tag">(изм.)</span>':''}</div><div>${m.text}</div><div class="msg-time">${time}</div>`;
-                if(mine) mDiv.onclick = (e) => showActions(e, doc.id, m.text);
+                if(mine) mDiv.onclick = (e) => window.showActions(e, doc.id, m.text);
                 d.appendChild(mDiv);
             });
             d.scrollTop = d.scrollHeight;
@@ -317,25 +317,24 @@
     window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId)); };
 
     window.switchSocial = (v) => {
+        // Переключаем видимость блоков
         ['add','req','grp'].forEach(id => document.getElementById('view-'+id).style.display = id===v?'block':'none');
+        // Переключаем активный класс на вкладках
+        const tabs = document.querySelectorAll('#modal-social .modal-tab');
+        tabs.forEach(tab => {
+            if(tab.innerText.toLowerCase().includes(v === 'add' ? 'поиск' : v === 'req' ? 'запросы' : 'группа')) tab.classList.add('active');
+            else tab.classList.remove('active');
+        });
     };
 
-    // ОТРЕМОНТИРОВАННАЯ ФУНКЦИЯ ПРИНЯТИЯ ЗАЯВКИ
     window.acceptFriend = async (id) => {
         try {
-            const myUid = auth.currentUser.uid;
-            // Добавляем друг друга в друзья и удаляем запрос
-            await updateDoc(doc(db, "users", myUid), { 
-                requests: arrayRemove(id), 
-                friends: arrayUnion(id) 
-            });
-            await updateDoc(doc(db, "users", id), { 
-                friends: arrayUnion(myUid) 
-            });
-            alert("Пользователь добавлен в друзья!");
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { requests: arrayRemove(id), friends: arrayUnion(id) });
+            await updateDoc(doc(db, "users", id), { friends: arrayUnion(auth.currentUser.uid) });
+            alert("Запрос принят!");
         } catch (e) {
-            console.error("Error accepting friend:", e);
-            alert("Ошибка при добавлении");
+            console.error(e);
+            alert("Ошибка при принятии запроса");
         }
     };
 
@@ -353,17 +352,13 @@
 
     document.getElementById('btn-send-req').onclick = async () => {
         const id = document.getElementById('search-uid').value.trim();
-        if(!id) return;
-        if(id === auth.currentUser.uid) return alert("Нельзя добавить самого себя");
-        
-        try {
-            const userSnap = await getDoc(doc(db, "users", id));
-            if(!userSnap.exists()) return alert("Пользователь не найден");
-            
-            await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); 
-            alert("Запрос отправлен!"); 
-        } catch (e) {
-            alert("Ошибка отправки. Проверьте UID.");
+        if(id) { 
+            try {
+                await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); 
+                alert("Отправлено!"); 
+            } catch(e) {
+                alert("Пользователь не найден");
+            }
         }
     };
 
@@ -373,7 +368,7 @@
         if(!name || selected.length === 0) return;
         const gRef = await addDoc(collection(db, "chats"), { groupName: name, members: [...selected, auth.currentUser.uid] });
         for(const m of [...selected, auth.currentUser.uid]) await updateDoc(doc(db, "users", m), { groups: arrayUnion(gRef.id) });
-        closeModals();
+        window.closeModals();
     };
 
     window.toggleBurger = () => {
@@ -386,11 +381,12 @@
     window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     
     document.getElementById('open-social').onclick = () => {
-        if(document.getElementById('side-nav').classList.contains('open')) toggleBurger();
+        if(document.getElementById('side-nav').classList.contains('open')) window.toggleBurger();
         document.getElementById('modal-social').style.display = 'flex';
+        window.switchSocial('add'); // Сбрасываем на вкладку поиска при открытии
     };
     document.getElementById('open-settings').onclick = () => {
-        if(document.getElementById('side-nav').classList.contains('open')) toggleBurger();
+        if(document.getElementById('side-nav').classList.contains('open')) window.toggleBurger();
         document.getElementById('modal-settings').style.display = 'flex';
     };
 
@@ -405,7 +401,7 @@
             await updateDoc(doc(db, "users", auth.currentUser.uid), { username: newNick, avatar: newAva });
             myNick = newNick;
             alert("Сохранено!");
-            closeModals();
+            window.closeModals();
         }
     };
 </script>
