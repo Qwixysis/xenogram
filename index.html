@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xenogram Ultimate</title>
+    <title>Xenogram Ultimate - Jarvis Edition</title>
     <style>
         :root {
             --bg-main: #1e1e1e; --bg-side: #23272a; --bg-nav: #111111;
             --accent: #7289da; --accent-hover: #5b70be; --danger: #f04747; --online: #43b581;
             --text-main: #ffffff; --text-dim: #b9bbbe;
+            --modal-anim: cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-main); color: var(--text-main); overflow: hidden; }
 
-        .app-container { display: flex; height: 100vh; width: 100vw; position: relative; }
+        .app-container { display: flex; height: 100vh; width: 100vw; }
 
         /* НАВИГАЦИЯ */
-        .side-nav { width: 72px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; z-index: 10; }
+        .side-nav { width: 72px; background: var(--bg-nav); display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; z-index: 100; }
         .nav-icon { 
             width: 48px; height: 48px; background: var(--bg-side); border-radius: 50%; margin-bottom: 12px; 
             cursor: pointer; display: flex; align-items: center; justify-content: center; 
-            transition: 0.2s; font-size: 22px;
+            transition: 0.3s var(--modal-anim); font-size: 22px;
         }
-        .nav-icon:hover { border-radius: 15px; background: var(--accent); }
+        .nav-icon:hover { border-radius: 15px; background: var(--accent); transform: scale(1.05); }
 
         /* СПИСОК ЧАТОВ */
-        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #000; display: flex; flex-direction: column; transition: 0.3s; z-index: 5; }
-        .list-header { padding: 20px; font-weight: 800; font-size: 18px; border-bottom: 1px solid #111; display: flex; justify-content: space-between; align-items: center; }
-        
+        .chat-list { width: 300px; background: var(--bg-side); border-right: 1px solid #111; display: flex; flex-direction: column; transition: 0.4s ease; z-index: 50; }
+        .list-header { padding: 20px; font-weight: 800; font-size: 18px; border-bottom: 1px solid #111; }
         .social-bar { padding: 15px; }
         .add-friend-btn { 
             width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; 
-            color: #fff; font-weight: 600; cursor: pointer; position: relative;
+            color: #fff; font-weight: 600; cursor: pointer; position: relative; transition: 0.2s;
         }
+        .add-friend-btn:active { transform: scale(0.98); }
         .req-badge { background: var(--danger); font-size: 11px; padding: 2px 7px; border-radius: 10px; position: absolute; top: -5px; right: -5px; border: 2px solid var(--bg-side); }
 
         #chats-container { overflow-y: auto; flex-grow: 1; }
@@ -45,49 +46,68 @@
         .chat-item.active { background: rgba(114, 137, 218, 0.2); color: var(--accent); }
         
         /* ОКНО ЧАТА */
-        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); transition: 0.3s; position: relative; }
-        .chat-header { height: 64px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid #111; background: var(--bg-side); gap: 10px; }
-        .back-btn { display: none; font-size: 20px; cursor: pointer; padding: 5px; }
-        #chat-title-container { flex-grow: 1; cursor: pointer; }
+        .chat-window { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-main); transition: 0.4s ease; position: relative; }
+        .chat-header { height: 64px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid #111; background: var(--bg-side); gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .back-btn { display: none; font-size: 24px; cursor: pointer; padding: 5px; }
+        #chat-title-container { flex-grow: 1; cursor: pointer; overflow: hidden; }
+        #chat-title { font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 
-        #messages-display { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        #messages-display { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
         
-        .msg { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.2s; padding: 8px 12px; border-radius: 12px; background: #2f3136; position: relative; width: fit-content; }
+        .msg { display: flex; flex-direction: column; max-width: 85%; animation: msgSlide 0.3s var(--modal-anim); padding: 8px 12px; border-radius: 12px; background: #2f3136; position: relative; }
         .msg.mine { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 2px; }
         .msg:not(.mine) { align-self: flex-start; border-bottom-left-radius: 2px; }
         
         .msg-info { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 2px; }
-        .msg-author { font-weight: 700; font-size: 12px; color: #eee; }
-        .msg-time { font-size: 10px; opacity: 0.6; }
-        .msg-text { font-size: 15px; line-height: 1.4; }
+        .msg-author { font-weight: 700; font-size: 12px; color: rgba(255,255,255,0.9); }
+        .msg-time { font-size: 10px; opacity: 0.7; }
+        .msg-text { font-size: 15px; line-height: 1.4; word-break: break-word; }
 
-        .input-area { padding: 15px; background: var(--bg-main); }
-        .input-box { background: #40444b; border-radius: 8px; display: flex; align-items: center; padding: 5px 12px; }
-        input#message-input { background: transparent; border: none; color: #fff; flex-grow: 1; height: 40px; font-size: 15px; }
+        .input-area { padding: 10px 15px 20px 15px; background: var(--bg-main); }
+        .input-box { background: #40444b; border-radius: 12px; display: flex; align-items: center; padding: 5px 12px; gap: 10px; }
+        input#message-input { background: transparent; border: none; color: #fff; flex-grow: 1; height: 45px; font-size: 16px; }
+        .send-btn { color: var(--accent); font-size: 24px; cursor: pointer; transition: 0.2s; display: none; }
+        .send-btn.visible { display: block; }
 
-        /* МОДАЛКИ */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--bg-side); width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; }
-        .modal-input { background: #1e1e1e; border: 1px solid #111; color: #fff; padding: 12px; width: 100%; border-radius: 5px; margin: 10px 0; }
-        .btn { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
+        /* МОДАЛКИ С АНИМАЦИЕЙ */
+        .modal { 
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); 
+            z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(5px); transition: 0.3s;
+        }
+        .modal.active { display: flex; animation: fadeIn 0.2s ease; }
+        .modal-content { 
+            background: var(--bg-side); width: 100%; max-width: 400px; padding: 25px; 
+            border-radius: 20px; transform: scale(0.8); opacity: 0;
+            transition: 0.4s var(--modal-anim);
+        }
+        .modal.active .modal-content { transform: scale(1); opacity: 1; }
+
+        .modal-input { background: #1e1e1e; border: 1px solid #333; color: #fff; padding: 12px; width: 100%; border-radius: 10px; margin: 10px 0; }
+        .btn { padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; transition: 0.2s; }
         .btn-primary { background: var(--accent); color: #fff; }
         .btn-danger { background: var(--danger); color: #fff; }
+        .btn:active { transform: scale(0.95); }
 
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: #4f545c; display: flex; align-items: center; justify-content: center; font-weight: bold; background-size: cover; background-position: center; flex-shrink: 0; }
-        .ctx-menu { display: none; position: absolute; background: #18191c; border-radius: 5px; padding: 5px; z-index: 2000; border: 1px solid #000; min-width: 150px; }
-        .ctx-menu button { width: 100%; text-align: left; background: none; border: none; color: #b9bbbe; padding: 10px; cursor: pointer; border-radius: 3px; }
+        
+        /* КОНТЕКСТНОЕ МЕНЮ */
+        .ctx-menu { display: none; position: absolute; background: #18191c; border-radius: 8px; padding: 5px; z-index: 2000; border: 1px solid #000; min-width: 160px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .ctx-menu button { width: 100%; text-align: left; background: none; border: none; color: #b9bbbe; padding: 12px; cursor: pointer; border-radius: 5px; font-size: 14px; }
         .ctx-menu button:hover { background: var(--accent); color: #fff; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes msgSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* АДАПТАЦИЯ */
         @media (max-width: 768px) {
-            .side-nav { width: 60px; }
+            .side-nav { width: 60px; padding-top: 10px; }
             .chat-list { width: calc(100vw - 60px); position: absolute; left: 60px; height: 100%; }
-            .chat-list.hidden { left: -100%; }
-            .chat-window { position: absolute; left: 60px; width: calc(100vw - 60px); height: 100%; z-index: 1; }
-            .chat-window.hidden { left: 100%; }
+            .chat-list.hidden { transform: translateX(-120%); }
+            .chat-window { position: absolute; left: 60px; width: calc(100vw - 60px); height: 100%; z-index: 10; }
+            .chat-window.hidden { transform: translateX(100%); }
             .back-btn { display: block; }
+            .send-btn { display: block; } /* Показываем кнопку на мобилках всегда */
         }
     </style>
 </head>
@@ -116,14 +136,15 @@
         <header class="chat-header">
             <div class="back-btn" onclick="showList()">⬅️</div>
             <div id="chat-title-container" onclick="viewFriendProfile()">
-                <div id="chat-title" style="font-weight: 700;">Выберите чат</div>
-                <div id="chat-status" style="font-size: 11px; color: var(--text-dim);">нажмите сюда для профиля</div>
+                <div id="chat-title">Выберите чат</div>
+                <div id="chat-status" style="font-size: 11px; color: var(--text-dim);">информация о друге</div>
             </div>
         </header>
         <div id="messages-display"></div>
         <div class="input-area">
             <div class="input-box">
                 <input type="text" id="message-input" placeholder="Сообщение..." disabled autocomplete="off">
+                <div class="send-btn" id="send-trigger" onclick="sendMessage()">➔</div>
             </div>
         </div>
     </main>
@@ -131,33 +152,32 @@
 
 <div id="modal-social" class="modal"><div class="modal-content">
     <h3>Социальный центр</h3>
-    <p style="font-size: 11px; color: var(--text-dim)">Твой ID (нажми скопировать):<br>
+    <p style="font-size: 11px; color: var(--text-dim)">Ваш UID (нажми скопировать):<br>
     <span id="my-uid" style="color:var(--accent); cursor:pointer; font-family:monospace" onclick="copyMyId()">...</span></p>
     <input type="text" id="search-uid" class="modal-input" placeholder="Вставьте UID друга...">
     <button class="btn btn-primary" onclick="sendRequest()">Добавить</button>
-    <div id="request-list" style="margin-top:15px; max-height: 150px; overflow-y: auto"></div>
-    <button class="btn" onclick="closeModals()">Закрыть</button>
+    <div id="request-list" style="margin-top:15px; max-height: 150px; overflow-y: auto; border-top: 1px solid #333"></div>
+    <button class="btn" onclick="closeModals()" style="background:transparent; color:#aaa">Закрыть</button>
 </div></div>
 
 <div id="modal-settings" class="modal"><div class="modal-content">
     <h3>Мой профиль</h3>
-    <div id="my-profile-info" style="text-align:center; margin-bottom:15px">
-        <div id="my-avatar-view" class="avatar" style="width:60px; height:60px; margin: 0 auto 10px"></div>
+    <div style="text-align:center; margin-bottom:15px">
+        <div id="my-avatar-view" class="avatar" style="width:70px; height:70px; margin: 0 auto 10px; font-size:24px"></div>
         <div id="my-name-view" style="font-weight:bold; font-size:18px"></div>
     </div>
-    <label style="font-size:12px; color:var(--text-dim)">ИЗМЕНИТЬ ДАННЫЕ:</label>
-    <input type="text" id="set-name" class="modal-input" placeholder="Имя">
-    <input type="text" id="set-avatar" class="modal-input" placeholder="URL аватара">
-    <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
-    <button class="btn" onclick="closeModals()">Назад</button>
+    <input type="text" id="set-name" class="modal-input" placeholder="Ваше имя">
+    <input type="text" id="set-avatar" class="modal-input" placeholder="URL аватара (прямая ссылка)">
+    <button class="btn btn-primary" onclick="saveSettings()">Сохранить изменения</button>
+    <button class="btn" onclick="closeModals()" style="background:transparent; color:#aaa">Назад</button>
 </div></div>
 
 <div id="modal-friend" class="modal"><div class="modal-content">
     <h3 id="f-name-title">Профиль друга</h3>
-    <div id="f-avatar-view" class="avatar" style="width:80px; height:80px; margin: 0 auto 15px"></div>
-    <p id="f-uid-view" style="font-size:10px; text-align:center; color:var(--text-dim)"></p>
+    <div id="f-avatar-view" class="avatar" style="width:90px; height:90px; margin: 0 auto 15px; font-size:30px"></div>
+    <p id="f-uid-view" style="font-size:11px; text-align:center; color:var(--text-dim); margin-bottom:20px; background:rgba(0,0,0,0.2); padding:8px; border-radius:5px"></p>
     <button class="btn btn-danger" onclick="deleteFriend()">Удалить из друзей</button>
-    <button class="btn" onclick="closeModals()">Закрыть</button>
+    <button class="btn" onclick="closeModals()" style="background:transparent; color:#aaa">Закрыть</button>
 </div></div>
 
 <div id="msg-ctx" class="ctx-menu">
@@ -200,17 +220,20 @@
     function startListeners() {
         onSnapshot(doc(db, "users", u.uid), async (snap) => {
             myData = snap.data();
+            if(!myData) return;
             const rList = document.getElementById('request-list');
             rList.innerHTML = "";
-            (myData.requests || []).forEach(async rid => {
+            const reqs = myData.requests || [];
+            for(let rid of reqs) {
                 const rs = await getDoc(doc(db, "users", rid));
-                rList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; margin-top:5px; border-radius:5px">
-                    <span>${rs.data()?.username || 'User'}</span>
-                    <button onclick="acceptFriend('${rid}')" style="background:var(--online); color:#fff; border:none; padding:5px 10px; border-radius:3px">ОК</button>
+                const rd = rs.data();
+                rList.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:10px; margin-top:8px; border-radius:10px">
+                    <span style="font-size:14px">${rd?.username || rid.slice(0,6)}</span>
+                    <button onclick="acceptFriend('${rid}')" style="background:var(--online); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer">Принять</button>
                 </div>`;
-            });
-            document.getElementById('global-badge').style.display = (myData.requests?.length > 0) ? 'block' : 'none';
-            document.getElementById('global-badge').innerText = myData.requests?.length || 0;
+            }
+            document.getElementById('global-badge').style.display = (reqs.length > 0) ? 'block' : 'none';
+            document.getElementById('global-badge').innerText = reqs.length;
         });
 
         const qChats = query(collection(db, "chats"), where("users", "array-contains", u.uid));
@@ -220,7 +243,7 @@
             for(let d of snap.docs) {
                 const otherId = d.data().users.find(id => id !== u.uid);
                 const otherSnap = await getDoc(doc(db, "users", otherId));
-                const oData = otherSnap.data() || { username: "Друг" };
+                const oData = otherSnap.data() || { username: "Пользователь" };
                 const div = document.createElement('div');
                 div.className = "chat-item" + (curChatId === d.id ? " active" : "");
                 div.innerHTML = `<div class="avatar" style="background-image:url(${oData.avatar})">${oData.avatar?'':oData.username[0]}</div>
@@ -234,7 +257,8 @@
     async function openChat(chatId, friendId, name) {
         curChatId = chatId; curFriendId = friendId;
         document.getElementById('chat-title').innerText = name;
-        document.getElementById('message-input').disabled = false;
+        const input = document.getElementById('message-input');
+        input.disabled = false;
         
         if(window.innerWidth <= 768) {
             document.getElementById('sidebar').classList.add('hidden');
@@ -249,7 +273,7 @@
             snap.forEach(doc => {
                 const m = doc.data();
                 const isMine = m.uid === u.uid;
-                const time = m.createdAt ? new Date(m.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
+                const time = m.createdAt ? new Date(m.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
                 disp.innerHTML += `<div class="msg ${isMine?'mine':''}" oncontextmenu="window.prepareCtx(event, '${doc.id}', '${m.text}', ${isMine})">
                     <div class="msg-info"><span class="msg-author">${isMine?'Вы':m.sender}</span><span class="msg-time">${time}</span></div>
                     <div class="msg-text">${m.text}</div>
@@ -259,15 +283,30 @@
         });
     }
 
-    document.getElementById('message-input').onkeydown = async (e) => {
-        if(e.key === "Enter" && e.target.value.trim()) {
-            const val = e.target.value; e.target.value = "";
-            if(editingId) {
-                await updateDoc(doc(db, "chats", curChatId, "messages", editingId), { text: val });
-                editingId = null;
-            } else {
-                await addDoc(collection(db, "chats", curChatId, "messages"), { text: val, uid: u.uid, sender: myData.username, createdAt: serverTimestamp() });
-            }
+    // Универсальная функция отправки (для кнопки и Enter)
+    window.sendMessage = async () => {
+        const input = document.getElementById('message-input');
+        const val = input.value.trim();
+        if(!val) return;
+        
+        input.value = "";
+        if(editingId) {
+            await updateDoc(doc(db, "chats", curChatId, "messages", editingId), { text: val });
+            editingId = null;
+        } else {
+            await addDoc(collection(db, "chats", curChatId, "messages"), { 
+                text: val, 
+                uid: u.uid, 
+                sender: myData.username, 
+                createdAt: serverTimestamp() 
+            });
+        }
+    };
+
+    document.getElementById('message-input').onkeydown = (e) => {
+        if(e.key === "Enter") {
+            e.preventDefault();
+            window.sendMessage();
         }
     };
 
@@ -290,14 +329,14 @@
         const snap = await getDoc(doc(db, "users", curFriendId));
         const d = snap.data();
         document.getElementById('f-name-title').innerText = d.username;
-        document.getElementById('f-uid-view').innerText = "UID: " + curFriendId;
+        document.getElementById('f-uid-view').innerText = curFriendId;
         document.getElementById('f-avatar-view').style.backgroundImage = `url(${d.avatar})`;
         document.getElementById('f-avatar-view').innerText = d.avatar ? '' : d.username[0];
-        document.getElementById('modal-friend').style.display = 'flex';
+        openModal('modal-friend');
     };
 
     window.deleteFriend = async () => {
-        if(!confirm("Удалить друга и чат?")) return;
+        if(!confirm("Удалить друга и всю историю чата?")) return;
         await updateDoc(doc(db, "users", u.uid), { friends: arrayRemove(curFriendId) });
         await updateDoc(doc(db, "users", curFriendId), { friends: arrayRemove(u.uid) });
         await deleteDoc(doc(db, "chats", curChatId));
@@ -309,12 +348,15 @@
         document.getElementById('my-avatar-view').style.backgroundImage = `url(${myData.avatar})`;
         document.getElementById('my-avatar-view').innerText = myData.avatar ? '' : myData.username[0];
         document.getElementById('set-name').value = myData.username;
-        document.getElementById('set-avatar').value = myData.avatar;
-        document.getElementById('modal-settings').style.display = 'flex';
+        document.getElementById('set-avatar').value = myData.avatar || '';
+        openModal('modal-settings');
     };
 
     window.saveSettings = async () => {
-        await updateDoc(doc(db, "users", u.uid), { username: document.getElementById('set-name').value, avatar: document.getElementById('set-avatar').value });
+        await updateDoc(doc(db, "users", u.uid), { 
+            username: document.getElementById('set-name').value, 
+            avatar: document.getElementById('set-avatar').value 
+        });
         closeModals();
     };
 
@@ -323,10 +365,30 @@
         document.getElementById('chat-view').classList.add('hidden');
     };
 
-    window.prepareCtx = (e, id, txt, mine) => { if(!mine) return; e.preventDefault(); editingId = id; window.tempText = txt; const m = document.getElementById('msg-ctx'); m.style.display='block'; m.style.left=e.pageX+'px'; m.style.top=e.pageY+'px'; };
-    window.editMsg = () => { document.getElementById('message-input').value = window.tempText; document.getElementById('message-input').focus(); };
-    window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", curChatId, "messages", editingId)); };
-    window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.style.display='none');
+    // Модалки с анимацией
+    window.openModal = (id) => document.getElementById(id).classList.add('active');
+    window.closeModals = () => document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+    window.openSocial = () => openModal('modal-social');
+
+    window.prepareCtx = (e, id, txt, mine) => { 
+        if(!mine) return; 
+        e.preventDefault(); 
+        editingId = id; 
+        window.tempText = txt; 
+        const m = document.getElementById('msg-ctx'); 
+        m.style.display='block'; m.style.left=e.pageX+'px'; m.style.top=e.pageY+'px'; 
+    };
+    
+    window.editMsg = () => { 
+        const input = document.getElementById('message-input');
+        input.value = window.tempText; 
+        input.focus(); 
+    };
+    
+    window.deleteMsg = async () => { 
+        if(confirm("Удалить это сообщение?")) await deleteDoc(doc(db, "chats", curChatId, "messages", editingId)); 
+    };
+    
     window.hideContext = () => document.getElementById('msg-ctx').style.display='none';
     window.copyMyId = () => { navigator.clipboard.writeText(u.uid); alert("ID скопирован!"); };
     document.getElementById('logout-btn').onclick = () => signOut(auth);
