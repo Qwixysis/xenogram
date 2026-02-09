@@ -68,6 +68,8 @@
         .modal-tab { cursor: pointer; color: var(--text-dim); padding: 8px; border-radius: 5px; }
         .modal-tab.active { background: #333; color: white; }
 
+        #my-uid-val { word-break: break-all; user-select: all; background: #000; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 5px; }
+
         .msg-actions { display: none; position: absolute; background: #111; border-radius: 8px; overflow: hidden; z-index: 1000; border: 1px solid #333; }
         .msg-actions button { display: block; width: 100%; padding: 10px 15px; border: none; background: none; color: white; cursor: pointer; text-align: left; }
         .msg-actions button:hover { background: var(--accent); }
@@ -80,6 +82,8 @@
             .chat-window { position: fixed; width: 100%; height: 100%; left: 100%; transition: 0.3s; z-index: 2000; }
             .app-container.chat-open .chat-window { left: 0; }
             #mobile-back { display: block; }
+            .modal-content { width: 95%; flex-direction: column; height: 80vh; }
+            .modal-sidebar { width: 100%; flex-direction: row; height: auto; padding: 10px; overflow-x: auto; }
         }
     </style>
 </head>
@@ -137,7 +141,7 @@
         <div class="modal-main" id="view-add">
             <input type="text" id="search-uid" placeholder="UID пользователя...">
             <button class="btn" id="btn-send-req" style="width:100%; margin-top:10px">Добавить</button>
-            <p style="font-size:10px">UID: <code id="my-uid-val"></code></p>
+            <p style="font-size:12px; margin-top:15px; color:var(--text-dim)">Ваш UID (нажмите, чтобы скопировать):<br><code id="my-uid-val"></code></p>
         </div>
         <div class="modal-main" id="view-req" style="display:none"><div id="req-list"></div></div>
         <div class="modal-main" id="view-grp" style="display:none">
@@ -242,7 +246,11 @@
                 }
             }
 
+            // Рендерим список запросов сразу при получении данных
             const rCont = document.getElementById('req-list'); rCont.innerHTML = "";
+            if((data.requests || []).length === 0) {
+                rCont.innerHTML = "<p style='text-align:center; opacity:0.5'>Нет входящих запросов</p>";
+            }
             for(const rId of (data.requests || [])) {
                 const rDoc = await getDoc(doc(db, "users", rId));
                 if(rDoc.exists()) {
@@ -317,12 +325,11 @@
     window.deleteMsg = async () => { if(confirm("Удалить?")) await deleteDoc(doc(db, "chats", currentChatId, "messages", selectedMsgId)); };
 
     window.switchSocial = (v) => {
-        // Переключаем видимость блоков
         ['add','req','grp'].forEach(id => document.getElementById('view-'+id).style.display = id===v?'block':'none');
-        // Переключаем активный класс на вкладках
         const tabs = document.querySelectorAll('#modal-social .modal-tab');
         tabs.forEach(tab => {
-            if(tab.innerText.toLowerCase().includes(v === 'add' ? 'поиск' : v === 'req' ? 'запросы' : 'группа')) tab.classList.add('active');
+            const label = tab.innerText.toLowerCase();
+            if((v==='add' && label.includes('поиск')) || (v==='req' && label.includes('запросы')) || (v==='grp' && label.includes('группа'))) tab.classList.add('active');
             else tab.classList.remove('active');
         });
     };
@@ -333,7 +340,6 @@
             await updateDoc(doc(db, "users", id), { friends: arrayUnion(auth.currentUser.uid) });
             alert("Запрос принят!");
         } catch (e) {
-            console.error(e);
             alert("Ошибка при принятии запроса");
         }
     };
@@ -352,13 +358,16 @@
 
     document.getElementById('btn-send-req').onclick = async () => {
         const id = document.getElementById('search-uid').value.trim();
-        if(id) { 
-            try {
-                await updateDoc(doc(db, "users", id), { requests: arrayUnion(auth.currentUser.uid) }); 
-                alert("Отправлено!"); 
-            } catch(e) {
-                alert("Пользователь не найден");
-            }
+        if(!id) return;
+        if(id === auth.currentUser.uid) { alert("Нельзя добавить самого себя"); return; }
+        try {
+            const userRef = doc(db, "users", id);
+            const userSnap = await getDoc(userRef);
+            if(!userSnap.exists()) { alert("Пользователь с таким UID не найден"); return; }
+            await updateDoc(userRef, { requests: arrayUnion(auth.currentUser.uid) }); 
+            alert("Запрос отправлен!"); 
+        } catch(e) {
+            alert("Ошибка: проверьте правильность UID");
         }
     };
 
@@ -383,7 +392,7 @@
     document.getElementById('open-social').onclick = () => {
         if(document.getElementById('side-nav').classList.contains('open')) window.toggleBurger();
         document.getElementById('modal-social').style.display = 'flex';
-        window.switchSocial('add'); // Сбрасываем на вкладку поиска при открытии
+        window.switchSocial('add');
     };
     document.getElementById('open-settings').onclick = () => {
         if(document.getElementById('side-nav').classList.contains('open')) window.toggleBurger();
