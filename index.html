@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Xenogram · Вход</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-card">
+        <h1>Xenogram</h1>
+        <p>Общайся по‑новому</p>
+        <input type="email" id="email" placeholder="Email" autocomplete="email">
+        <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+        <div class="auth-buttons">
+            <button id="loginBtn">Войти</button>
+            <button id="regBtn">Регистрация</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, db } from "./firebase.js";
+        import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        document.getElementById("loginBtn").onclick = () => {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("password").value;
+            signInWithEmailAndPassword(auth, email, pass)
+                .then(() => window.location.href = "app.html")
+                .catch(err => alert("Ошибка: " + err.message));
+        };
+
+        document.getElementById("regBtn").onclick = async () => {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("password").value;
+            try {
+                const res = await createUserWithEmailAndPassword(auth, email, pass);
+                // Создаём документ пользователя с uid
+                await setDoc(doc(db, "users", res.user.uid), {
+                    uid: res.user.uid,
+                    email: email,
+                    nick: email.split('@')[0],
+                    photoURL: "",
+                    friends: [],
+                    pending: [],
+                    requestsSent: [],
+                    online: false,
+                    lastSeen: new Date()
+                });
+                window.location.href = "app.html";
+            } catch (err) { alert(err.message); }
+        };
+    </script>
+</body>
+</html>
