@@ -1,18 +1,18 @@
 import { auth, db, storage } from "./firebase.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
   doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot, 
-  collection, addDoc, serverTimestamp, query, orderBy, setDoc 
+  collection, addDoc, serverTimestamp, query, orderBy, setDoc, where, getDocs 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 // ========== Глобальные переменные ==========
 let currentUser = null;
 let currentChatUid = null;           // uid друга, с которым открыт чат
+let currentChatNick = '';            // ник друга для отображения
 let unsubscribeChat = null;
 let unsubscribeFriends = null;
 let unsubscribePending = null;
-let unsubscribePresence = {};
 
 // ========== Инициализация ==========
 onAuthStateChanged(auth, async (user) => {
@@ -21,48 +21,70 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
   currentUser = user;
-  document.getElementById("userNick").textContent = user.displayName || user.email;
+  
+  // Загружаем данные пользователя из Firestore
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  let userData = userDoc.exists() ? userDoc.data() : {};
+  
+  // Если в Firestore нет ника, берём из email
+  const displayNick = userData.nick || user.email?.split('@')[0] || 'User';
+  
+  document.getElementById("userNick").textContent = displayNick;
   document.getElementById("userUid").textContent = user.uid;
-  document.getElementById("userAvatar").textContent = (user.displayName?.[0] || user.email?.[0] || "?").toUpperCase();
+  
+  const avatarDiv = document.getElementById("userAvatar");
+  if (userData.photoURL) {
+    avatarDiv.innerHTML = `<img src="${userData.photoURL}" style="width:36px; height:36px; border-radius:50%;">`;
+  } else {
+    avatarDiv.textContent = displayNick[0].toUpperCase();
+  }
+
+  // Устанавливаем статус онлайн
+  await updateDoc(doc(db, "users", user.uid), {
+    online: true,
+    lastSeen: serverTimestamp(),
+    nick: displayNick,
+    email: user.email
+  });
 
   // Загружаем список друзей и запросов
   loadFriends();
   loadPending();
 
-  // Устанавливаем статус онлайн
-  await setUserOnline(true);
   // При закрытии вкладки ставим офлайн
-  window.addEventListener("beforeunload", () => setUserOnline(false));
+  window.addEventListener("beforeunload", () => {
+    if (currentUser) {
+      updateDoc(doc(db, "users", currentUser.uid), { online: false });
+    }
+  });
 });
 
-async function setUserOnline(online) {
-  if (!currentUser) return;
-  const userRef = doc(db, "users", currentUser.uid);
-  await updateDoc(userRef, {
-    online: online,
-    lastSeen: serverTimestamp()
-  });
-}
-
-// ========== Загрузка друзей и запросов ==========
+// ========== Загрузка друзей ==========
 async function loadFriends() {
   if (!currentUser) return;
+  
   const userRef = doc(db, "users", currentUser.uid);
-  unsubscribeFriends = onSnapshot(userRef, (snap) => {
+  unsubscribeFriends = onSnapshot(userRef, async (snap) => {
     const data = snap.data();
     if (!data) return;
+    
     const friendsUids = data.friends || [];
     const friendsList = document.getElementById("friendsList");
     friendsList.innerHTML = "";
 
-    // Для каждого uid друга получаем его данные (ник, аватар, онлайн)
-    friendsUids.forEach(async (friendUid) => {
+    // Для каждого друга получаем его данные
+    const friendPromises = friendsUids.map(async (friendUid) => {
       const friendSnap = await getDoc(doc(db, "users", friendUid));
-      if (!friendSnap.exists()) return;
-      const friend = friendSnap.data();
+      if (!friendSnap.exists()) return null;
+      return { uid: friendUid, ...friendSnap.data() };
+    });
+    
+    const friends = (await Promise.all(friendPromises)).filter(f => f);
+    
+    friends.forEach(friend => {
       const li = document.createElement("li");
-      li.setAttribute("data-uid", friendUid);
-      li.onclick = () => openChat(friendUid, friend.nick, friend.photoURL);
+      li.setAttribute("data-uid", friend.uid);
+      li.onclick = () => openChat(friend.uid, friend.nick, friend.photoURL);
 
       const avatar = friend.photoURL 
         ? `<img src="${friend.photoURL}" class="avatar">`
@@ -72,7 +94,7 @@ async function loadFriends() {
       
       li.innerHTML = `
         ${avatar}
-        <span>${friend.nick || friendUid}</span>
+        <span>${friend.nick || friend.uid}</span>
         <span class="${statusClass}"></span>
       `;
       friendsList.appendChild(li);
@@ -80,28 +102,36 @@ async function loadFriends() {
   });
 }
 
+// ========== Загрузка входящих запросов ==========
 async function loadPending() {
   if (!currentUser) return;
+  
   const userRef = doc(db, "users", currentUser.uid);
-  unsubscribePending = onSnapshot(userRef, (snap) => {
+  unsubscribePending = onSnapshot(userRef, async (snap) => {
     const data = snap.data();
     if (!data) return;
+    
     const pendingUids = data.pending || [];
     const pendingList = document.getElementById("pendingList");
     pendingList.innerHTML = "";
 
-    pendingUids.forEach(async (uid) => {
+    const requestPromises = pendingUids.map(async (uid) => {
       const userSnap = await getDoc(doc(db, "users", uid));
-      if (!userSnap.exists()) return;
-      const userData = userSnap.data();
+      if (!userSnap.exists()) return null;
+      return { uid, ...userSnap.data() };
+    });
+    
+    const requests = (await Promise.all(requestPromises)).filter(r => r);
+    
+    requests.forEach(req => {
       const li = document.createElement("li");
       li.style.display = "flex";
       li.style.justifyContent = "space-between";
       li.style.alignItems = "center";
 
       li.innerHTML = `
-        <span>${userData.nick || uid}</span>
-        <button onclick="acceptFriendRequest('${uid}')" style="background: var(--accent); padding: 4px 12px;">✓</button>
+        <span>${req.nick || req.uid}</span>
+        <button onclick="acceptFriendRequest('${req.uid}')" style="background: var(--accent); padding: 4px 12px;">✓</button>
       `;
       pendingList.appendChild(li);
     });
@@ -118,12 +148,13 @@ window.acceptFriendRequest = async (friendUid) => {
     friends: arrayUnion(friendUid),
     pending: arrayRemove(friendUid)
   });
+  
   await updateDoc(doc(db, "users", friendUid), {
     friends: arrayUnion(myUid),
     requestsSent: arrayRemove(myUid)
   });
 
-  // Автоматически открываем чат с этим другом
+  // Открываем чат с этим другом
   const friendSnap = await getDoc(doc(db, "users", friendUid));
   if (friendSnap.exists()) {
     const friend = friendSnap.data();
@@ -133,8 +164,10 @@ window.acceptFriendRequest = async (friendUid) => {
 
 // ========== Открыть чат с другом ==========
 async function openChat(friendUid, friendNick, friendPhoto) {
-  if (currentChatUid === friendUid) return;
+  if (!currentUser) return;
+  
   currentChatUid = friendUid;
+  currentChatNick = friendNick;
 
   document.getElementById("chatHeader").innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px;">
@@ -154,11 +187,15 @@ async function openChat(friendUid, friendNick, friendPhoto) {
   unsubscribeChat = onSnapshot(q, (snapshot) => {
     const chatBox = document.getElementById("chatBox");
     chatBox.innerHTML = "";
+    
     snapshot.forEach((doc) => {
       const msg = doc.data();
       const isOutgoing = msg.senderUid === currentUser.uid;
-      const senderNick = msg.senderNick || (isOutgoing ? currentUser.displayName : friendNick);
-      const senderPhoto = isOutgoing ? (currentUser.photoURL || "") : (friendPhoto || "");
+      
+      // Получаем отправителя
+      const senderNick = isOutgoing 
+        ? (currentUser.displayName || currentUser.email) 
+        : (friendNick || friendUid);
 
       const msgDiv = document.createElement("div");
       msgDiv.className = `message ${isOutgoing ? "outgoing" : "incoming"}`;
@@ -178,8 +215,7 @@ async function openChat(friendUid, friendNick, friendPhoto) {
 
       msgDiv.innerHTML = `
         <div class="sender">
-          ${senderPhoto ? `<img src="${senderPhoto}">` : ""}
-          ${senderNick}
+          <span>${senderNick}</span>
           <span class="timestamp">${time}</span>
         </div>
         ${content}
@@ -207,7 +243,7 @@ window.sendMessage = async () => {
 };
 
 // ========== Отправка медиа ==========
-document.getElementById("mediaInput").addEventListener("change", async (e) => {
+document.getElementById("mediaInput")?.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file || !currentChatUid || !currentUser) return;
 
@@ -263,52 +299,72 @@ document.getElementById("mediaInput").addEventListener("change", async (e) => {
   document.getElementById("mediaInput").value = "";
 });
 
-// ========== Друзья ==========
+// ========== Добавление друга по нику ==========
 window.openFriendModal = () => {
   document.getElementById("friendModal").style.display = "block";
 };
+
 window.closeFriendModal = () => {
   document.getElementById("friendModal").style.display = "none";
   document.getElementById("friendError").textContent = "";
+  document.getElementById("friendNickInput").value = "";
 };
 
 window.sendFriendRequest = async () => {
-  const friendUid = document.getElementById("friendUidInput").value.trim();
+  const friendNick = document.getElementById("friendNickInput").value.trim();
   const errorEl = document.getElementById("friendError");
-  if (!friendUid) return;
+  
+  if (!friendNick) return;
+  if (!currentUser) return;
+
+  // Ищем пользователя по нику
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("nick", "==", friendNick));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    errorEl.textContent = "Пользователь с таким ником не найден";
+    return;
+  }
+
+  const friendDoc = querySnapshot.docs[0];
+  const friendUid = friendDoc.id;
+  const friendData = friendDoc.data();
 
   if (friendUid === currentUser.uid) {
     errorEl.textContent = "Нельзя добавить самого себя";
     return;
   }
 
-  const friendRef = doc(db, "users", friendUid);
-  const friendSnap = await getDoc(friendRef);
-  if (!friendSnap.exists()) {
-    errorEl.textContent = "Пользователь с таким UID не найден";
+  // Проверяем, не в друзьях ли уже
+  const myData = (await getDoc(doc(db, "users", currentUser.uid))).data();
+  if (myData.friends?.includes(friendUid)) {
+    errorEl.textContent = "Этот пользователь уже у вас в друзьях";
     return;
   }
 
-  // Добавляем запрос в pending у друга и в requestsSent у себя
-  await updateDoc(friendRef, {
+  // Добавляем запрос
+  await updateDoc(doc(db, "users", friendUid), {
     pending: arrayUnion(currentUser.uid)
   });
+  
   await updateDoc(doc(db, "users", currentUser.uid), {
     requestsSent: arrayUnion(friendUid)
   });
 
   closeFriendModal();
-  alert("Запрос отправлен!");
+  alert("Запрос отправлен пользователю " + friendNick);
 };
 
 // ========== Профиль ==========
 window.openProfileModal = async () => {
   if (!currentUser) return;
+  
   const userSnap = await getDoc(doc(db, "users", currentUser.uid));
   if (userSnap.exists()) {
     const data = userSnap.data();
-    document.getElementById("profileUid").textContent = data.uid || currentUser.uid;
-    document.getElementById("profileEmail").textContent = data.email || currentUser.email;
+    document.getElementById("profileUid").textContent = currentUser.uid;
+    document.getElementById("profileEmail").textContent = currentUser.email;
     document.getElementById("profileNick").textContent = data.nick || currentUser.displayName;
     document.getElementById("profileAvatar").src = data.photoURL || "";
   }
@@ -333,24 +389,27 @@ window.updateProfileData = async () => {
   }
 
   await updateDoc(doc(db, "users", currentUser.uid), updates);
-  // Обновляем displayName в Auth (необязательно, но полезно)
+  
+  // Обновляем displayName в Auth
   if (newNick) {
     await updateProfile(currentUser, { displayName: newNick });
-  }
-  if (newPhoto) {
-    await updateProfile(currentUser, { photoURL: newPhoto });
   }
 
   alert("Профиль обновлён!");
   closeProfileModal();
-  // Обновим отображение ника и аватарки в сайдбаре
+  
+  // Обновляем отображение
   document.getElementById("userNick").textContent = newNick || currentUser.displayName;
-  if (newPhoto) document.getElementById("userAvatar").src = newPhoto;
+  if (newPhoto) {
+    document.getElementById("userAvatar").innerHTML = `<img src="${newPhoto}" style="width:36px; height:36px; border-radius:50%;">`;
+  }
 };
 
 // ========== Выход ==========
 window.logout = async () => {
-  await setUserOnline(false);
+  if (currentUser) {
+    await updateDoc(doc(db, "users", currentUser.uid), { online: false });
+  }
   signOut(auth).then(() => {
     window.location.href = "index.html";
   });
