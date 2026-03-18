@@ -8,8 +8,8 @@ import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/fireba
 
 // ========== Глобальные переменные ==========
 let currentUser = null;
-let currentChatUid = null;           // uid друга, с которым открыт чат
-let currentChatNick = '';            // ник друга для отображения
+let currentChatUid = null;           
+let currentChatNick = '';            
 let unsubscribeChat = null;
 let unsubscribeFriends = null;
 let unsubscribePending = null;
@@ -22,11 +22,34 @@ onAuthStateChanged(auth, async (user) => {
   }
   currentUser = user;
   
-  // Загружаем данные пользователя из Firestore
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-  let userData = userDoc.exists() ? userDoc.data() : {};
+  // Проверяем, существует ли документ пользователя в Firestore
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
   
-  // Если в Firestore нет ника, берём из email
+  let userData = {};
+  if (!userSnap.exists()) {
+    // Если документа нет – создаём его (для старых пользователей)
+    userData = {
+      uid: user.uid,
+      email: user.email,
+      nick: user.displayName || user.email.split('@')[0],
+      photoURL: user.photoURL || "",
+      friends: [],
+      pending: [],
+      requestsSent: [],
+      online: true,
+      lastSeen: serverTimestamp()
+    };
+    await setDoc(userRef, userData);
+  } else {
+    userData = userSnap.data();
+    // Обновляем онлайн статус
+    await updateDoc(userRef, {
+      online: true,
+      lastSeen: serverTimestamp()
+    });
+  }
+  
   const displayNick = userData.nick || user.email?.split('@')[0] || 'User';
   
   document.getElementById("userNick").textContent = displayNick;
@@ -38,14 +61,6 @@ onAuthStateChanged(auth, async (user) => {
   } else {
     avatarDiv.textContent = displayNick[0].toUpperCase();
   }
-
-  // Устанавливаем статус онлайн
-  await updateDoc(doc(db, "users", user.uid), {
-    online: true,
-    lastSeen: serverTimestamp(),
-    nick: displayNick,
-    email: user.email
-  });
 
   // Загружаем список друзей и запросов
   loadFriends();
@@ -72,7 +87,6 @@ async function loadFriends() {
     const friendsList = document.getElementById("friendsList");
     friendsList.innerHTML = "";
 
-    // Для каждого друга получаем его данные
     const friendPromises = friendsUids.map(async (friendUid) => {
       const friendSnap = await getDoc(doc(db, "users", friendUid));
       if (!friendSnap.exists()) return null;
@@ -143,7 +157,6 @@ window.acceptFriendRequest = async (friendUid) => {
   if (!currentUser) return;
   const myUid = currentUser.uid;
 
-  // Добавляем друг друга в массивы friends
   await updateDoc(doc(db, "users", myUid), {
     friends: arrayUnion(friendUid),
     pending: arrayRemove(friendUid)
@@ -154,7 +167,6 @@ window.acceptFriendRequest = async (friendUid) => {
     requestsSent: arrayRemove(myUid)
   });
 
-  // Открываем чат с этим другом
   const friendSnap = await getDoc(doc(db, "users", friendUid));
   if (friendSnap.exists()) {
     const friend = friendSnap.data();
@@ -177,7 +189,6 @@ async function openChat(friendUid, friendNick, friendPhoto) {
   `;
   document.getElementById("messageInputArea").style.display = "flex";
 
-  // Отписываемся от предыдущего чата
   if (unsubscribeChat) unsubscribeChat();
 
   const chatId = [currentUser.uid, friendUid].sort().join("_");
@@ -192,7 +203,6 @@ async function openChat(friendUid, friendNick, friendPhoto) {
       const msg = doc.data();
       const isOutgoing = msg.senderUid === currentUser.uid;
       
-      // Получаем отправителя
       const senderNick = isOutgoing 
         ? (currentUser.displayName || currentUser.email) 
         : (friendNick || friendUid);
@@ -247,7 +257,6 @@ document.getElementById("mediaInput")?.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file || !currentChatUid || !currentUser) return;
 
-  // Проверка размера (макс 5 MB)
   if (file.size > 5 * 1024 * 1024) {
     alert("Файл слишком большой! Макс 5 MB.");
     return;
@@ -260,7 +269,6 @@ document.getElementById("mediaInput")?.addEventListener("change", async (e) => {
     return;
   }
 
-  // Проверка дневных лимитов
   const today = new Date().toISOString().split("T")[0];
   const limitRef = doc(db, "dailyLimits", currentUser.uid + "_" + today);
   const limitSnap = await getDoc(limitRef);
@@ -276,7 +284,6 @@ document.getElementById("mediaInput")?.addEventListener("change", async (e) => {
     return;
   }
 
-  // Загрузка в Storage
   const storageRef = ref(storage, `media/${currentUser.uid}/${Date.now()}_${file.name}`);
   await uploadBytes(storageRef, file);
   const url = await getDownloadURL(storageRef);
@@ -290,7 +297,6 @@ document.getElementById("mediaInput")?.addEventListener("change", async (e) => {
     timestamp: serverTimestamp()
   });
 
-  // Обновляем лимиты
   await setDoc(limitRef, {
     photos: isImage ? limits.photos + 1 : limits.photos,
     videos: isVideo ? limits.videos + 1 : limits.videos
@@ -317,7 +323,6 @@ window.sendFriendRequest = async () => {
   if (!friendNick) return;
   if (!currentUser) return;
 
-  // Ищем пользователя по нику
   const usersRef = collection(db, "users");
   const q = query(usersRef, where("nick", "==", friendNick));
   const querySnapshot = await getDocs(q);
@@ -336,14 +341,12 @@ window.sendFriendRequest = async () => {
     return;
   }
 
-  // Проверяем, не в друзьях ли уже
   const myData = (await getDoc(doc(db, "users", currentUser.uid))).data();
   if (myData.friends?.includes(friendUid)) {
     errorEl.textContent = "Этот пользователь уже у вас в друзьях";
     return;
   }
 
-  // Добавляем запрос
   await updateDoc(doc(db, "users", friendUid), {
     pending: arrayUnion(currentUser.uid)
   });
@@ -390,7 +393,6 @@ window.updateProfileData = async () => {
 
   await updateDoc(doc(db, "users", currentUser.uid), updates);
   
-  // Обновляем displayName в Auth
   if (newNick) {
     await updateProfile(currentUser, { displayName: newNick });
   }
@@ -398,7 +400,6 @@ window.updateProfileData = async () => {
   alert("Профиль обновлён!");
   closeProfileModal();
   
-  // Обновляем отображение
   document.getElementById("userNick").textContent = newNick || currentUser.displayName;
   if (newPhoto) {
     document.getElementById("userAvatar").innerHTML = `<img src="${newPhoto}" style="width:36px; height:36px; border-radius:50%;">`;
