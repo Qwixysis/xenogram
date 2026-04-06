@@ -23,6 +23,7 @@ let editingMsgId = null;
 let userSettings = { hideOnline: false, friendsOnly: false, sound: true };
 let activeTypingListeners = {};
 
+// ========== Particles (без изменений) ==========
 const canvas = document.getElementById('effectsCanvas');
 const ctx = canvas?.getContext('2d');
 let particles = [];
@@ -200,7 +201,6 @@ window.showToast = function(message, type = "info") {
     toast.className = `toast toast-${type}`;
     toast.innerHTML = message;
     container.appendChild(toast);
-    
     setTimeout(() => toast.classList.add("show"), 10);
     setTimeout(() => {
         toast.classList.remove("show");
@@ -209,6 +209,7 @@ window.showToast = function(message, type = "info") {
     }, 3000);
 };
 
+// ========== ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ ==========
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
@@ -217,11 +218,44 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   
   try {
+    // ===== КРИТИЧЕСКИ ВАЖНО: создаём документ пользователя, если его нет =====
+    const userDocRef = doc(db, "users", user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+        console.log("Документ пользователя не найден, создаём...");
+        await setDoc(userDocRef, {
+            uid: user.uid,
+            email: user.email,
+            nick: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL || "",
+            friends: [],
+            pending: [],
+            requestsSent: [],
+            online: true,
+            lastSeen: serverTimestamp(),
+            customStatus: "",
+            settings: { hideOnline: false, friendsOnly: false, sound: true }
+        });
+        console.log("✅ Документ создан");
+    }
+
+    // Загрузка данных пользователя (настройки, статус)
+    const userDoc = await getDoc(userDocRef);
+    if(userDoc.exists()) {
+        const data = userDoc.data();
+        if(data.settings) {
+            userSettings = { ...userSettings, ...data.settings };
+        }
+        const userStatusEl = document.getElementById("userCustomStatus");
+        if(userStatusEl) {
+            userStatusEl.textContent = data.customStatus || "Установить статус";
+        }
+    }
+
+    // Обновляем UI профиля
     const userNickEl = document.getElementById("userNick");
     const userUidEl = document.getElementById("userUid");
     const userAvatarEl = document.getElementById("userAvatar");
-    const userStatusEl = document.getElementById("userCustomStatus");
-    
     if(userNickEl) userNickEl.textContent = user.displayName || user.email;
     if(userUidEl) userUidEl.textContent = user.uid;
     if(userAvatarEl) {
@@ -232,17 +266,7 @@ onAuthStateChanged(auth, async (user) => {
         }
     }
 
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    if(userDoc.exists()) {
-        const data = userDoc.data();
-        if(data.settings) {
-            userSettings = { ...userSettings, ...data.settings };
-        }
-        if(userStatusEl) {
-            userStatusEl.textContent = data.customStatus || "Установить статус";
-        }
-    }
-
+    // Загружаем друзей и запросы
     await loadFriends();
     await loadPending();
 
@@ -292,11 +316,9 @@ onAuthStateChanged(auth, async (user) => {
             handleTyping();
             const len = chatInput.value.length;
             const limit = 250;
-            
             if (len > limit) {
                 chatInput.value = chatInput.value.substring(0, limit);
             }
-            
             if (len > 150 && charCounter) {
                 charCounter.style.opacity = "1";
                 charCounter.textContent = `${limit - chatInput.value.length}`;
@@ -341,34 +363,29 @@ async function setUserOnline(isOnline) {
   }
 }
 
+// ========== ЗАГРУЗКА ДРУЗЕЙ И ЗАПРОСОВ (без изменений, но оставлено для целостности) ==========
 async function loadFriends() {
   if (!currentUser) return;
   const userRef = doc(db, "users", currentUser.uid);
-  
   if (unsubscribeFriends) unsubscribeFriends();
-  
   unsubscribeFriends = onSnapshot(userRef, async (snap) => {
     const data = snap.data();
     if (!data) return;
     const friendsUids = data.friends || [];
     const friendsList = document.getElementById("friendsList");
     if (!friendsList) return;
-    
     let displayUids = [...friendsUids];
     if (currentChatUid && !displayUids.includes(currentChatUid)) {
         displayUids.unshift(currentChatUid);
     }
-    
     const statFriends = document.getElementById("statFriends");
     const contactsCount = document.getElementById("contactsCount");
     if (statFriends) statFriends.textContent = friendsUids.length;
     if (contactsCount) contactsCount.textContent = friendsUids.length;
-
     if (displayUids.length === 0) {
         friendsList.innerHTML = `<li style="pointer-events:none; opacity:0.5; font-size:0.85em; display:flex; justify-content:center;">У вас пока нет контактов</li>`;
         return;
     }
-    
     const contactDataList = [];
     for (const uid of displayUids) {
         try {
@@ -383,14 +400,11 @@ async function loadFriends() {
             contactDataList.push({ uid, nick: "Ошибка загрузки" });
         }
     }
-
     friendsList.innerHTML = "";
     let onlineCount = 0;
-
     for (const friend of contactDataList) {
       if (friend.online && friendsUids.includes(friend.uid)) onlineCount++;
       const friendUid = friend.uid;
-
       const li = document.createElement("li");
       li.setAttribute("data-uid", friendUid);
       li.onclick = () => openChat(friendUid, friend.nick, friend.photoURL, friend.online, friend.customStatus);
@@ -406,20 +420,16 @@ async function loadFriends() {
               menu.style.left = `${x}px`; menu.style.top = `${y}px`;
           }
       };
-
       if (currentChatUid === friendUid) {
           li.classList.add("active");
           const statusEl = document.getElementById("chatHeaderStatus");
           if(statusEl) statusEl.textContent = friend.online ? "в сети" : "был(а) недавно";
       }
-
       const avatarContent = friend.photoURL 
         ? `<img src="${friend.photoURL}">`
         : `${(friend.nick?.[0] || "?").toUpperCase()}`;
-
       const statusClass = friend.online ? "online-indicator" : "offline-indicator";
       const customStatus = friend.customStatus ? `<div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(friend.customStatus)}</div>` : '';
-      
       li.innerHTML = `
         <div class="avatar">${avatarContent}</div>
         <div style="flex:1;">
@@ -430,7 +440,6 @@ async function loadFriends() {
         <span class="status-dot ${statusClass}"></span>
       `;
       friendsList.appendChild(li);
-
       if (activeTypingListeners[friendUid]) activeTypingListeners[friendUid]();
       const chatId = [currentUser.uid, friendUid].sort().join("_");
       activeTypingListeners[friendUid] = onSnapshot(doc(db, "privateMessages", chatId), (chatSnap) => {
@@ -451,7 +460,6 @@ async function loadFriends() {
           }
       });
     }
-    
     const statOnline = document.getElementById("statOnline");
     if (statOnline) statOnline.textContent = onlineCount;
   });
@@ -467,16 +475,13 @@ async function loadPending() {
     const pendingUids = data.pending || [];
     const pendingList = document.getElementById("pendingList");
     const pendingHeader = document.getElementById("pendingHeader");
-    
     if(pendingList) pendingList.innerHTML = "";
-
     if(pendingUids.length === 0 && pendingList) {
         if(pendingHeader) pendingHeader.style.display = "none";
         return;
     } else {
         if(pendingHeader) pendingHeader.style.display = "block";
     }
-
     pendingUids.forEach(async (uid) => {
       try {
         const userSnap = await getDoc(doc(db, "users", uid));
@@ -488,7 +493,6 @@ async function loadPending() {
         li.style.alignItems = "center";
         li.style.cursor = "default";
         li.style.background = "rgba(255,255,255,0.05)";
-
         li.innerHTML = `
           <span style="font-size:0.9em;">${escapeHtml(userData.nick || uid)}</span>
           <button onclick="acceptFriendRequest('${uid}')" class="btn-small" style="background:var(--accent); color:white; border:none; cursor:pointer;" title="Принять">Принять</button>
@@ -502,7 +506,6 @@ async function loadPending() {
 window.acceptFriendRequest = async (friendUid) => {
   if (!currentUser) return;
   const myUid = currentUser.uid;
-
   try {
       await updateDoc(doc(db, "users", myUid), {
         friends: arrayUnion(friendUid),
@@ -513,7 +516,6 @@ window.acceptFriendRequest = async (friendUid) => {
         requestsSent: arrayRemove(myUid)
       });
       showToast("Контакт добавлен!", "success");
-      
       const friendSnap = await getDoc(doc(db, "users", friendUid));
       if (friendSnap.exists()) {
         const friend = friendSnap.data();
@@ -524,25 +526,22 @@ window.acceptFriendRequest = async (friendUid) => {
   }
 };
 
+// ========== ОТКРЫТЬ ЧАТ (с мобильной поддержкой) ==========
 window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnline, friendCustomStatus) {
   document.querySelectorAll("#friendsList li").forEach(el => el.classList.remove("active"));
   const friendLi = document.querySelector(`#friendsList li[data-uid="${friendUid}"]`);
   if (friendLi) friendLi.classList.add("active");
-  
   document.body.classList.add("show-chat");
   if (window.innerWidth <= 768) {
     document.body.classList.remove("sidebar-visible");
   }
-
   currentChatUid = friendUid;
   replyToMsgId = null;
   cancelReply();
   cancelEdit();
-
   const headerAvatar = document.getElementById("chatHeaderAvatar");
   const headerName = document.getElementById("chatHeaderName");
   const headerStatus = document.getElementById("chatHeaderStatus");
-  
   if(headerAvatar) {
       if(friendPhoto) {
           headerAvatar.innerHTML = `<img src="${friendPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
@@ -550,55 +549,39 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
           headerAvatar.innerHTML = (friendNick?.[0] || "?").toUpperCase();
       }
   }
-  
   if(headerName) headerName.textContent = friendNick || friendUid;
   let statusText = friendOnline ? "в сети" : "был(а) недавно";
   if(friendCustomStatus) statusText += ` • ${friendCustomStatus}`;
   if(headerStatus) headerStatus.textContent = statusText;
-  
   const chatHeader = document.getElementById("chatHeader");
   const messageInputArea = document.getElementById("messageInputArea");
   if(chatHeader) chatHeader.style.display = "flex";
   if(messageInputArea) messageInputArea.style.display = "flex";
-  
   const chatInput = document.getElementById("chatInput");
   if(chatInput) {
       chatInput.value = "";
       chatInput.focus();
   }
-
   if (unsubscribeChat) unsubscribeChat();
   if (unsubscribeTyping) unsubscribeTyping();
-
   const chatId = [currentUser.uid, friendUid].sort().join("_");
   const messagesRef = collection(db, "privateMessages", chatId, "messages");
   const q = query(messagesRef, orderBy("timestamp"));
-
   unsubscribeChat = onSnapshot(q, (snapshot) => {
     const chatBox = document.getElementById("chatBox");
     if (!chatBox) return;
-    
     if (snapshot.empty) {
-        chatBox.innerHTML = `
-            <div class="empty-chat" style="height:100%; margin-top:50px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:60px; height:60px; margin-bottom:15px; opacity:0.5;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                <h2>Здесь пока пусто</h2>
-                <p style="font-size:0.9em; opacity:0.7; margin-top:10px;">Напишите первое сообщение</p>
-            </div>
-        `;
+        chatBox.innerHTML = `<div class="empty-chat" style="height:100%; margin-top:50px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:60px; height:60px; margin-bottom:15px; opacity:0.5;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><h2>Здесь пока пусто</h2><p style="font-size:0.9em; opacity:0.7; margin-top:10px;">Напишите первое сообщение</p></div>`;
         return;
     } else {
         const emptyState = chatBox.querySelector('.empty-chat');
         if(emptyState) emptyState.remove();
     }
-
     let isAtBottom = (chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 150);
-
     snapshot.docChanges().forEach((change) => {
       const docSnap = change.doc;
       const msg = docSnap.data();
       const msgId = docSnap.id;
-
       if (change.type === "added") {
           const isOutgoing = msg.senderUid === currentUser.uid;
           const msgDiv = document.createElement("div");
@@ -630,12 +613,10 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
           }
       }
     });
-
     if (isAtBottom) {
         chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
     }
   });
-
   const chatMetaRef = doc(db, "privateMessages", chatId);
   unsubscribeTyping = onSnapshot(chatMetaRef, (snap) => {
       const data = snap.data();
@@ -662,7 +643,6 @@ function showContextMenu(e, msgId, isOutgoing, msgText) {
     contextMenuTargetMsgId = {id: msgId, text: msgText, isOutgoing};
     const menu = document.getElementById("messageContextMenu");
     if(!menu) return;
-    
     const delBtn = document.getElementById('menuDelete');
     const editBtn = document.getElementById('menuEdit');
     if(!isOutgoing) {
@@ -673,14 +653,11 @@ function showContextMenu(e, msgId, isOutgoing, msgText) {
         if(editBtn) editBtn.style.display = 'block';
         if(editBtn && !msgText) editBtn.style.display = 'none';
     }
-
     menu.style.display = "block";
-    
     let x = e.pageX;
     let y = e.pageY;
     if(x + menu.offsetWidth > window.innerWidth) x = window.innerWidth - menu.offsetWidth - 10;
     if(y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - 10;
-    
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
 }
@@ -688,7 +665,6 @@ function showContextMenu(e, msgId, isOutgoing, msgText) {
 window.triggerReply = () => {
     if(!contextMenuTargetMsgId) return;
     replyToMsgId = contextMenuTargetMsgId;
-    
     let container = document.getElementById('replyingToBanner');
     if(!container) {
         container = document.createElement('div');
@@ -697,7 +673,6 @@ window.triggerReply = () => {
         const inputArea = document.getElementById('messageInputArea');
         if(inputArea && inputArea.parentNode) inputArea.parentNode.insertBefore(container, inputArea);
     }
-    
     container.innerHTML = `
         <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:middle;"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
@@ -705,7 +680,6 @@ window.triggerReply = () => {
         </div>
         <div class="cancel" onclick="cancelReply()">&times;</div>
     `;
-    
     const menu = document.getElementById('messageContextMenu');
     if(menu) menu.style.display = 'none';
     const chatInput = document.getElementById('chatInput');
@@ -718,9 +692,7 @@ window.triggerEditMessage = () => {
     if(menu) menu.style.display = 'none';
     editingMsgId = contextMenuTargetMsgId.id;
     const input = document.getElementById("chatInput");
-    
     cancelReply();
-    
     let container = document.getElementById('replyingToBanner');
     if(!container) {
         container = document.createElement('div');
@@ -729,7 +701,6 @@ window.triggerEditMessage = () => {
         const inputArea = document.getElementById('messageInputArea');
         if(inputArea && inputArea.parentNode) inputArea.parentNode.insertBefore(container, inputArea);
     }
-    
     container.innerHTML = `
         <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:middle;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -737,7 +708,6 @@ window.triggerEditMessage = () => {
         </div>
         <div class="cancel" onclick="cancelEdit()">&times;</div>
     `;
-    
     if(input) {
         input.value = contextMenuTargetMsgId.text.replace(/<br>/g, "\n");
         input.focus();
@@ -763,7 +733,6 @@ window.triggerDelete = async () => {
     if(!contextMenuTargetMsgId || !currentChatUid || !currentUser) return;
     const menu = document.getElementById('messageContextMenu');
     if(menu) menu.style.display = 'none';
-    
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
     try {
         await deleteDoc(doc(db, "privateMessages", chatId, "messages", contextMenuTargetMsgId.id));
@@ -778,7 +747,6 @@ window.triggerDeleteFriend = async () => {
     const menu = document.getElementById('friendContextMenu');
     if(menu) menu.style.display = 'none';
     const fUid = contextMenuTargetFriendUid;
-    
     try {
         await updateDoc(doc(db, "users", currentUser.uid), {
             friends: arrayRemove(fUid)
@@ -787,7 +755,6 @@ window.triggerDeleteFriend = async () => {
             friends: arrayRemove(currentUser.uid)
         });
         showToast("Контакт удален");
-        
         if (currentChatUid === fUid) {
             const chatHeader = document.getElementById("chatHeader");
             const messageInputArea = document.getElementById("messageInputArea");
@@ -795,12 +762,7 @@ window.triggerDeleteFriend = async () => {
             if(chatHeader) chatHeader.style.display = "none";
             if(messageInputArea) messageInputArea.style.display = "none";
             if(chatBox) {
-                chatBox.innerHTML = `
-                    <div class="empty-chat no-contacts-yet">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        <h2>Выберите контакт</h2>
-                    </div>
-                `;
+                chatBox.innerHTML = `<div class="empty-chat no-contacts-yet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><h2>Выберите контакт</h2></div>`;
             }
             currentChatUid = null;
         }
@@ -813,13 +775,10 @@ async function handleTyping() {
     if (!currentChatUid || !currentUser) return;
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
     const chatMetaRef = doc(db, "privateMessages", chatId);
-    
     try {
         await setDoc(chatMetaRef, { typing: { [currentUser.uid]: true } }, { merge: true });
     } catch(e) { console.warn(e); }
-    
     if (typingTimeout) clearTimeout(typingTimeout);
-    
     typingTimeout = setTimeout(async () => {
         try {
             await setDoc(chatMetaRef, { typing: { [currentUser.uid]: false } }, { merge: true });
@@ -866,17 +825,16 @@ if(chatSearchInput) {
     });
 }
 
+// ========== ОТПРАВКА СООБЩЕНИЯ ==========
 window.sendMessage = async () => {
   const input = document.getElementById("chatInput");
   const text = input?.value.trim();
   if (!text || !currentChatUid || !currentUser) return;
-  
   const sendBtn = document.getElementById("sendBtn");
   if(sendBtn) {
       sendBtn.style.opacity = "0.5";
       sendBtn.style.pointerEvents = "none";
   }
-
   try {
       if (!editingMsgId) {
           const recipientDoc = await getDoc(doc(db, "users", currentChatUid));
@@ -890,20 +848,16 @@ window.sendMessage = async () => {
               }
           }
       }
-
       const chatId = [currentUser.uid, currentChatUid].sort().join("_");
-      
       if (typingTimeout) clearTimeout(typingTimeout);
       const chatMetaRef = doc(db, "privateMessages", chatId);
       await setDoc(chatMetaRef, { typing: { [currentUser.uid]: false } }, { merge: true });
-
       let msgData = {
         senderUid: currentUser.uid,
         senderNick: currentUser.displayName || currentUser.email,
         text: text,
         timestamp: serverTimestamp()
       };
-
       if (editingMsgId) {
           await updateDoc(doc(db, "privateMessages", chatId, "messages", editingMsgId), {
               text: text,
@@ -917,21 +871,17 @@ window.sendMessage = async () => {
           }
           await addDoc(collection(db, "privateMessages", chatId, "messages"), msgData);
       }
-      
       if(input) input.value = "";
       const charCounter = document.getElementById("charCounter");
       if (charCounter) charCounter.style.opacity = "0";
-      
       const chatBox = document.getElementById("chatBox");
       if(chatBox) chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
-
       const lower = text.toLowerCase();
       if(lower.includes("ура") || lower.includes("поздравляю") || lower.includes("party") || lower.includes("супер")) {
           window.triggerConfetti();
       } else if(lower.includes("❤️") || lower.includes("люблю") || lower.includes("love")) {
           window.triggerConfetti('love');
       }
-
   } catch(e) {
       showToast("Ошибка при отправке", "error");
   } finally {
@@ -943,6 +893,7 @@ window.sendMessage = async () => {
   }
 };
 
+// ========== ГОЛОСОВЫЕ СООБЩЕНИЯ ==========
 function blobToBase64(blob) {
   return new Promise((resolve, _) => {
     const reader = new FileReader();
@@ -950,27 +901,22 @@ function blobToBase64(blob) {
     reader.readAsDataURL(blob);
   });
 }
-
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingTimeout = null;
-
 const voiceBtn = document.getElementById("voiceBtn");
 if(voiceBtn) {
     let isRecording = false;
-
     const startRecording = async () => {
         if (!currentChatUid || !currentUser) return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-
             mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 const base64Audio = await blobToBase64(audioBlob);
-                
                 const chatId = [currentUser.uid, currentChatUid].sort().join("_");
                 await addDoc(collection(db, "privateMessages", chatId, "messages"), {
                     senderUid: currentUser.uid,
@@ -981,20 +927,16 @@ if(voiceBtn) {
                 });
                 showToast("Голосовое отправлено!", "success");
             };
-
             mediaRecorder.start();
             isRecording = true;
             voiceBtn.classList.add("recording");
-            
             recordingTimeout = setTimeout(() => {
                 if(isRecording) stopRecording();
             }, 15000);
-
         } catch(err) {
             showToast("Нет доступа к микрофону", "error");
         }
     };
-
     const stopRecording = () => {
         if(isRecording && mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
@@ -1004,7 +946,6 @@ if(voiceBtn) {
             if(mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
         }
     };
-
     voiceBtn.addEventListener('mousedown', startRecording);
     voiceBtn.addEventListener('mouseup', stopRecording);
     voiceBtn.addEventListener('mouseleave', stopRecording);
@@ -1013,6 +954,7 @@ if(voiceBtn) {
     voiceBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopRecording(); });
 }
 
+// ========== НАСТРОЙКИ ==========
 window.openSettingsModal = async () => {
   if (!currentUser) return;
   try {
@@ -1027,14 +969,12 @@ window.openSettingsModal = async () => {
       if(profileEmail) profileEmail.textContent = data.email || currentUser.email;
       if(profileNick) profileNick.textContent = data.nick || currentUser.displayName;
       if(profileCustomStatus) profileCustomStatus.textContent = data.customStatus || "Статус не установлен";
-      
       const newNickInput = document.getElementById("newNick");
       const newStatusInput = document.getElementById("newStatus");
       const newPhotoInput = document.getElementById("newPhoto");
       if(newNickInput) newNickInput.value = data.nick || currentUser.displayName || "";
       if(newStatusInput) newStatusInput.value = data.customStatus || "";
       if(newPhotoInput) newPhotoInput.value = data.photoURL || "";
-      
       const imgEl = document.getElementById("profileAvatarImg");
       const textEl = document.getElementById("profileAvatarText");
       if(data.photoURL && imgEl && textEl) {
@@ -1046,7 +986,6 @@ window.openSettingsModal = async () => {
           textEl.style.display = "block";
           textEl.textContent = (data.nick?.[0] || "?").toUpperCase();
       }
-      
       if(data.settings) {
           userSettings = { ...userSettings, ...data.settings };
       }
@@ -1073,13 +1012,11 @@ window.switchSettingsTab = (tabName) => {
     });
     const targetTab = document.getElementById(`tab-${tabName}`);
     if(targetTab) targetTab.style.display = "block";
-    
     document.querySelectorAll(".settings-sidebar li").forEach(li => {
         li.classList.remove("active");
     });
     const activeLi = document.querySelector(`.settings-sidebar li[onclick*="${tabName}"]`);
     if(activeLi) activeLi.classList.add("active");
-
     const titles = {
         'account': 'Учетная запись',
         'appearance': 'Внешний вид',
@@ -1094,12 +1031,10 @@ window.updateProfileData = async () => {
   const newNick = document.getElementById("newNick")?.value.trim();
   const newStatus = document.getElementById("newStatus")?.value.trim();
   const newPhoto = document.getElementById("newPhoto")?.value.trim();
-
   const updates = {};
   if (newNick) updates.nick = newNick;
   if (newStatus !== undefined) updates.customStatus = newStatus;
   if (newPhoto !== undefined) updates.photoURL = newPhoto;
-
   try {
       await updateDoc(doc(db, "users", currentUser.uid), updates);
       if (newNick) {
@@ -1108,22 +1043,17 @@ window.updateProfileData = async () => {
       if (newPhoto) {
         await updateProfile(currentUser, { photoURL: newPhoto });
       }
-
       showToast("Настройки сохранены!", "success");
-      
       const userNickEl = document.getElementById("userNick");
       if(userNickEl && newNick) userNickEl.textContent = newNick;
-      
       const userStatusEl = document.getElementById("userCustomStatus");
       if(userStatusEl) userStatusEl.textContent = newStatus || "Установить статус";
-
       const userAvatarEl = document.getElementById("userAvatar");
       if (newPhoto && userAvatarEl) {
           userAvatarEl.innerHTML = `<img src="${newPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
       } else if (newNick && userAvatarEl && !newPhoto) {
           userAvatarEl.textContent = newNick[0].toUpperCase();
       }
-      
   } catch(e) {
       showToast("Ошибка при сохранении", "error");
   }
@@ -1154,20 +1084,17 @@ window.toggleReaction = async (msgId, emoji) => {
     if (!currentChatUid || !currentUser) return;
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
     const msgRef = doc(db, "privateMessages", chatId, "messages", msgId);
-    
     try {
         const snap = await getDoc(msgRef);
         if(!snap.exists()) return;
         const data = snap.data();
         let reactions = data.reactions || {};
         let uids = reactions[emoji] || [];
-        
         if (uids.includes(currentUser.uid)) {
             uids = uids.filter(id => id !== currentUser.uid);
         } else {
             uids.push(currentUser.uid);
         }
-        
         reactions[emoji] = uids;
         await updateDoc(msgRef, { reactions: reactions });
     } catch(e) {
@@ -1184,14 +1111,19 @@ window.closeFriendModal = () => {
   if(modal) modal.style.display = "none";
 };
 
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ДОБАВЛЕНИЯ ДРУГА ==========
 window.sendFriendRequest = async () => {
-  const friendUid = document.getElementById("friendUidInput")?.value.trim();
+  let friendUid = document.getElementById("friendUidInput")?.value.trim();
   const errorEl = document.getElementById("friendError");
+  
   if (!friendUid) {
       if (errorEl) errorEl.textContent = "UID не может быть пустым";
       return;
   }
 
+  // Удаляем все пробелы и невидимые символы
+  friendUid = friendUid.replace(/\s/g, '');
+  
   if (friendUid === currentUser.uid) {
     if (errorEl) errorEl.textContent = "Нельзя добавить самого себя";
     return;
@@ -1199,8 +1131,9 @@ window.sendFriendRequest = async () => {
 
   const friendRef = doc(db, "users", friendUid);
   const friendSnap = await getDoc(friendRef);
+  
   if (!friendSnap.exists()) {
-    if (errorEl) errorEl.textContent = "Пользователь с таким UID не найден";
+    if (errorEl) errorEl.textContent = "❌ Пользователь с таким UID не найден. Убедитесь, что UID введён верно и пользователь зарегистрирован.";
     return;
   }
 
@@ -1213,20 +1146,19 @@ window.sendFriendRequest = async () => {
       });
 
       closeFriendModal();
-      showToast("Запрос отправлен!", "success");
-      const input = document.getElementById("friendUidInput");
-      if(input) input.value = "";
+      showToast("✅ Запрос отправлен!", "success");
+      document.getElementById("friendUidInput").value = "";
   } catch(e) {
-      if (errorEl) errorEl.textContent = "Произошла ошибка при отправке";
+      if (errorEl) errorEl.textContent = "Ошибка при отправке: " + e.message;
   }
 };
 
+// ========== ИНФОРМАЦИЯ О ЧАТЕ, ФОНЫ ==========
 window.showChatInfo = async () => {
     if(!currentChatUid) return;
     const friendSnap = await getDoc(doc(db, "users", currentChatUid));
     if(!friendSnap.exists()) return;
     const friend = friendSnap.data();
-    
     let modal = document.getElementById("chatInfoModal");
     if(!modal) {
         modal = document.createElement("div");
@@ -1236,7 +1168,6 @@ window.showChatInfo = async () => {
             <div class="modal-content glass" style="max-width: 400px; padding: 30px;">
                 <h2 style="margin-bottom: 20px;">Информация о чате</h2>
                 <div id="modalFriendInfo" style="display:flex; align-items:center; gap:15px; margin-bottom:25px;"></div>
-                
                 <div style="margin-bottom: 20px;">
                     <label style="display:block; margin-bottom:10px; font-size:0.9rem; opacity:0.7;">Фон чата</label>
                     <div style="display:flex; gap:10px;">
@@ -1246,7 +1177,6 @@ window.showChatInfo = async () => {
                         <div onclick="setChatWallpaper('sakura')" style="width:40px; height:40px; background:linear-gradient(45deg, #ffc9e0, #ff9a9e); border-radius:8px; cursor:pointer;" title="Сакура"></div>
                     </div>
                 </div>
-
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <button class="btn-danger" style="width:100%; height:45px;" onclick="clearChatHistory()">Очистить историю</button>
                     <button class="btn-secondary" style="width:100%; height:45px;" onclick="document.getElementById('chatInfoModal').style.display='none'">Закрыть</button>
@@ -1255,7 +1185,6 @@ window.showChatInfo = async () => {
         `;
         document.body.appendChild(modal);
     }
-    
     const infoArea = document.getElementById("modalFriendInfo");
     if(infoArea) {
         infoArea.innerHTML = `
@@ -1268,7 +1197,6 @@ window.showChatInfo = async () => {
             </div>
         `;
     }
-
     modal.style.display = "flex";
 };
 
@@ -1309,7 +1237,6 @@ window.copyUid = () => {
 window.setTheme = (theme) => {
     document.body.className = `app-page theme-${theme}`;
     localStorage.setItem('xenogram_theme', theme);
-    
     document.querySelectorAll('.theme-color').forEach(el => el.classList.remove('active'));
     const target = document.querySelector('.theme-color.' + theme);
     if(target) target.classList.add('active');
@@ -1324,7 +1251,7 @@ window.setTheme = (theme) => {
     }, 500);
 })();
 
-// ========== МОБИЛЬНЫЙ БУРГЕР ==========
+// ========== МОБИЛЬНЫЙ БУРГЕР (добавлен) ==========
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 if (mobileMenuBtn) {
     mobileMenuBtn.addEventListener('click', (e) => {
@@ -1332,7 +1259,6 @@ if (mobileMenuBtn) {
         document.body.classList.toggle('sidebar-visible');
     });
 }
-
 document.addEventListener('click', (e) => {
     if (window.innerWidth <= 768 && document.body.classList.contains('sidebar-visible')) {
         const sidebar = document.querySelector('.sidebar');
