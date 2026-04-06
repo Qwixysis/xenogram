@@ -291,33 +291,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script type="module" src="main.js"></script>
-    <script>
-        function copyUid() {
-            const uid = document.getElementById('profileUid').innerText;
-            navigator.clipboard.writeText(uid).then(() => {
-                window.showToast?.("UID скопирован", "success");
-            });
-        }
-
-        function switchSettingsTab(tabId) {
-            document.querySelectorAll('.settings-tab').forEach(t => t.style.display = 'none');
-            document.getElementById('tab-' + tabId).style.display = 'block';
-            
-            document.querySelectorAll('.settings-sidebar li').forEach(li => li.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-        }
-
-        // Загрузка темы при старте
-        const savedTheme = localStorage.getItem('xenogram_theme') || 'violet';
-        document.body.className = `app-page theme-${savedTheme}`;
-        
-        function setTheme(theme) {
-            document.body.className = `app-page theme-${theme}`;
-            localStorage.setItem('xenogram_theme', theme);
-            
-            document.querySelectorAll('.theme-color').forEach(el => el.classList.remove('active'));
-            document.querySelector('.theme-color.' + theme).classList.add('active');
-        }
-    </script>
+</body>
+</html>
 </body>
 </html>
