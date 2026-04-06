@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xenogram · Вход</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-card">
+        <h1>Xenogram</h1>
+        <p>Квантовая связь нового поколения</p>
+        
+        <div class="input-group">
+            <input type="email" id="email" placeholder="Email" autocomplete="email">
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+        </div>
+        
+        <div class="auth-buttons">
+            <button id="loginBtn">Войти в сеть</button>
+            <button id="regBtn">Создать аккаунт</button>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    <script type="module" src="auth.js"></script>
+</body>
+</html>
