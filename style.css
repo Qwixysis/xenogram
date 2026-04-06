@@ -791,6 +791,36 @@ body {
 /* =========================================
    SETTINGS MODAL (Discord/Telegram Style)
 ========================================= */
+/* Mobile header (hidden on desktop) */
+.mobile-settings-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: rgba(15, 17, 26, 0.95);
+  backdrop-filter: blur(25px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.mobile-settings-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.mobile-settings-header .back-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+}
+
 .settings-layout {
   padding: 0 !important;
   width: 100%;
@@ -1317,10 +1347,15 @@ input:checked + .slider:before {
     flex-direction: column;
   }
   
+  /* Settings Ultra-Premium Mobile Styles */
+  .mobile-settings-header {
+    display: flex; /* Show on mobile */
+  }
+
   .settings-layout {
       height: 100dvh;
       flex-direction: column;
-      overflow: hidden; /* Prevent global scroll, use content scroll */
+      overflow: hidden;
   }
   
   .settings-sidebar {
@@ -1333,7 +1368,7 @@ input:checked + .slider:before {
       z-index: 10;
   }
   
-  .settings-sidebar h3 {
+  .settings-sidebar .desktop-only-title {
       display: none; /* Hide header text on mobile sidebar */
   }
 
@@ -1342,92 +1377,78 @@ input:checked + .slider:before {
       display: flex;
       flex-wrap: nowrap;
       overflow-x: auto;
-      gap: 5px;
-      padding: 10px 15px;
-      scrollbar-width: none; /* Hide scrollbar Firefox */
+      gap: 10px;
+      padding: 12px 15px;
+      scrollbar-width: none;
   }
   
-  .settings-sidebar ul::-webkit-scrollbar {
-      display: none; /* Hide scrollbar Chrome/Safari */
-  }
+  .settings-sidebar ul::-webkit-scrollbar { display: none; }
   
   .settings-sidebar li {
       flex: 0 0 auto;
       margin-bottom: 0;
-      font-size: 0.85rem;
-      padding: 10px 16px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.03);
+      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      border: 1px solid rgba(255,255,255,0.05);
+      gap: 6px;
   }
+
+  .settings-sidebar li svg { width: 14px; height: 14px; }
 
   .settings-sidebar li.active {
       background: var(--accent);
       color: white;
+      border-color: var(--accent-light);
   }
   
-  .settings-logout {
-      display: block;
-      width: calc(100% - 40px);
-      margin: 20px;
-      padding: 14px;
-      background: rgba(255, 118, 117, 0.1);
-      border: 1px solid rgba(255, 118, 117, 0.2);
-      border-radius: 12px;
-      text-align: center;
-      font-weight: 600;
-  }
-
   .settings-content {
       flex: 1;
-      padding: 20px;
-      padding-bottom: 80px; /* Safe space */
+      padding: 20px 15px 100px;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+      background: var(--bg-primary);
   }
 
   .settings-close-circle {
-      right: 15px;
-      top: 15px;
-      width: 38px;
-      height: 38px;
-      background: rgba(255,255,255,0.1);
-  }
-  
-  .settings-close-circle span {
-      display: none; /* Hide ESC on mobile */
+      display: none !important; /* Hide circular close button on mobile, use header back btn */
   }
 
-  /* Settings specific cards on mobile */
-  .profile-card {
-      padding: 20px;
-      gap: 15px;
+  .settings-tab h2 {
+      font-size: 1.4rem;
       margin-bottom: 15px;
+  }
+
+  .profile-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 15px;
+      border-radius: 16px;
+      margin-bottom: 20px;
   }
   
   .info-block {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
       border-radius: 16px;
       padding: 5px;
+      margin-bottom: 20px;
   }
   
   .info-row {
-      padding: 15px;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 10px;
+      padding: 12px 10px;
+      font-size: 0.9rem;
   }
   
-  .info-row div:last-child {
-      align-self: flex-end; /* Switch buttons to the right */
+  .settings-tab h3 {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin: 20px 0 10px 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
   }
-  
-  .theme-selector {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-  }
-  
-  .theme-color {
-      height: 50px;
-  }
+}
 
   .user-info {
     padding: 16px;
@@ -1491,4 +1512,3 @@ input:checked + .slider:before {
   button, li, .reaction-badge {
     touch-action: manipulation;
   }
-}
