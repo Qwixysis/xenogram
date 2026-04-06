@@ -15,7 +15,6 @@
     <canvas id="effectsCanvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;"></canvas>
 
     <aside class="sidebar">
-        <!-- Текущий пользователь -->
         <div class="user-info" onclick="window.openSettingsModal?.()" style="cursor: pointer;" title="Настройки">
             <div style="display: flex; align-items: center; gap: 14px;">
                 <div class="avatar" id="userAvatar" style="display:flex;align-items:center;justify-content:center;">⏳</div>
@@ -29,7 +28,6 @@
             </div>
         </div>
         
-        <!-- Поиск -->
         <div class="search-bar" style="padding: 15px 20px 5px;">
             <div style="position: relative;">
                 <input type="text" id="contactSearch" placeholder="Поиск контактов..." style="width: 100%; padding: 10px 15px 10px 35px; border-radius: 20px; border: var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text); outline: none;">
@@ -63,7 +61,6 @@
                 <span id="chatHeaderName" style="line-height:1; font-weight: 600;"></span>
                 <span id="chatHeaderStatus" style="font-size:0.75rem; color:var(--text-muted); font-weight: 500; height:12px;"></span>
             </div>
-            <!-- Инструменты чата -->
             <div class="chat-tools" style="display: flex; gap: 15px; color: var(--text-muted);">
                 <svg onclick="window.toggleChatSearch()" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor: pointer;" title="Поиск по чату"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <svg onclick="window.showChatInfo()" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor: pointer;" title="Информация"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -135,7 +132,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
             <h2 id="mobileSettingsTitle">Настройки</h2>
-            <div style="width: 40px;"></div> <!-- Spacer for centering -->
+            <div style="width: 40px;"></div>
         </div>
 
         <div class="settings-sidebar">
@@ -263,7 +260,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -291,7 +287,5 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script type="module" src="main.js"></script>
-</body>
-</html>
 </body>
 </html>
