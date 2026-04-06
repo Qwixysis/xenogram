@@ -1,8 +1,7 @@
 import { auth, db } from "./firebase.js";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Toast Notification System
 export function showToast(message, type = "info") {
     let container = document.getElementById("toastContainer");
     if (!container) {
@@ -11,16 +10,11 @@ export function showToast(message, type = "info") {
         container.className = "toast-container";
         document.body.appendChild(container);
     }
-    
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
     toast.innerHTML = message;
     container.appendChild(toast);
-    
-    // Animate in
     setTimeout(() => toast.classList.add("show"), 10);
-    
-    // Animate out
     setTimeout(() => {
         toast.classList.remove("show");
         toast.classList.add("hide");
@@ -40,12 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("Заполните все поля", "error");
                 return;
             }
-            
-            // Add loading state
             const originalText = loginBtn.textContent;
             loginBtn.textContent = "Подключение...";
             loginBtn.disabled = true;
-
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
                 showToast("Успешный вход!", "success");
@@ -67,17 +58,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast("Заполните все поля", "error");
                 return;
             }
-
             const originalText = regBtn.textContent;
             regBtn.textContent = "Создание...";
             regBtn.disabled = true;
-
             try {
                 const res = await createUserWithEmailAndPassword(auth, email, pass);
                 const defaultNick = email.split('@')[0];
-                
                 await updateProfile(res.user, { displayName: defaultNick });
-                
                 // Создаём документ пользователя
                 await setDoc(doc(db, "users", res.user.uid), {
                     uid: res.user.uid,
@@ -88,9 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     pending: [],
                     requestsSent: [],
                     online: true,
-                    lastSeen: new Date()
+                    lastSeen: serverTimestamp(),
+                    customStatus: "",
+                    settings: { hideOnline: false, friendsOnly: false, sound: true }
                 });
-                
                 showToast("Аккаунт создан!", "success");
                 window.location.href = "app.html";
             } catch (err) { 
@@ -103,11 +91,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// If already logged in, redirect to app
+// Если пользователь уже залогинен, но документа нет – перенаправляем на создание? Нет, создадим в app.html.
+// Но для чистоты: при попытке открыть index.html с залогиненным пользователем – редирект.
 onAuthStateChanged(auth, user => {
-    // Only redirect if we are actively on index.html or root
     const path = window.location.pathname;
-    if (user && (path.endsWith("index.html") || path.endsWith("/"))) {
+    if (user && (path.endsWith("index.html") || path === "/" || path === "")) {
         window.location.href = "app.html";
     }
 });
