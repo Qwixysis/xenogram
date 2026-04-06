@@ -22,7 +22,7 @@ let contextMenuTargetFriendUid = null;
 let editingMsgId = null;
 
 let userSettings = { hideOnline: false, friendsOnly: false, sound: true };
-let activeTypingListeners = {}; // Moved to GLOBAL top level for safety
+let activeTypingListeners = {};
 
 // ========== Effect System (Particles) ==========
 const canvas = document.getElementById('effectsCanvas');
@@ -113,7 +113,7 @@ window.triggerConfetti = (type = 'default') => {
     }
 };
 
-// ========== Emoji Check Utility ==========
+// ========== Emoji Check ==========
 function isOnlyEmojis(str) {
     const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
     const match = str.match(emojiRegex);
@@ -123,17 +123,17 @@ function isOnlyEmojis(str) {
 }
 
 function renderMessageHTML(msgId, msg, isOutgoing, senderNick, senderPhoto, friendNick, friendPhoto) {
-    const senderPhotoFinal = isOutgoing ? (currentUser.photoURL || "") : (friendPhoto || "");
-    const senderNickFinal = msg.senderNick || (isOutgoing ? currentUser.displayName : (friendNick || "Друг"));
+    const senderPhotoFinal = isOutgoing ? (currentUser?.photoURL || "") : (friendPhoto || "");
+    const senderNickFinal = msg.senderNick || (isOutgoing ? currentUser?.displayName : (friendNick || "Друг"));
 
     let replyHtml = "";
     if(msg.replyTo) {
-        replyHtml = `<div class="message-reply-preview">${msg.replyTo}</div>`;
+        replyHtml = `<div class="message-reply-preview">${escapeHtml(msg.replyTo)}</div>`;
     }
 
     let content = "";
     if (msg.text) {
-        content = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        content = escapeHtml(msg.text).replace(/\n/g, "<br>");
     } else if (msg.mediaUrl) {
         if (msg.mediaType === "image") {
             content = `<img src="${msg.mediaUrl}" alt="image" loading="lazy">`;
@@ -176,7 +176,7 @@ function renderMessageHTML(msgId, msg, isOutgoing, senderNick, senderPhoto, frie
             ${replyHtml}
             <div class="sender">
               ${senderPhotoFinal ? `<img src="${senderPhotoFinal}">` : ""}
-              ${senderNickFinal}
+              ${escapeHtml(senderNickFinal)}
             </div>
             ${content}
             ${reactionsHtml}
@@ -184,6 +184,16 @@ function renderMessageHTML(msgId, msg, isOutgoing, senderNick, senderPhoto, frie
             <div style="clear:both;"></div>
         `
     };
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
 }
 
 // ========== Toast Notifications ==========
@@ -211,122 +221,122 @@ onAuthStateChanged(auth, async (user) => {
   }
   currentUser = user;
   
-  // Инициализация UI профиля
-  const userNickEl = document.getElementById("userNick");
-  const userUidEl = document.getElementById("userUid");
-  const userAvatarEl = document.getElementById("userAvatar");
-  const userStatusEl = document.getElementById("userCustomStatus");
-  
-  if(userNickEl) userNickEl.textContent = user.displayName || user.email;
-  if(userUidEl) userUidEl.textContent = user.uid;
-  if(userAvatarEl) {
-      if(user.photoURL) {
-          userAvatarEl.innerHTML = `<img src="${user.photoURL}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
-      } else {
-          userAvatarEl.textContent = (user.displayName?.[0] || user.email?.[0] || "?").toUpperCase();
-      }
+  try {
+    // Инициализация UI профиля
+    const userNickEl = document.getElementById("userNick");
+    const userUidEl = document.getElementById("userUid");
+    const userAvatarEl = document.getElementById("userAvatar");
+    const userStatusEl = document.getElementById("userCustomStatus");
+    
+    if(userNickEl) userNickEl.textContent = user.displayName || user.email;
+    if(userUidEl) userUidEl.textContent = user.uid;
+    if(userAvatarEl) {
+        if(user.photoURL) {
+            userAvatarEl.innerHTML = `<img src="${user.photoURL}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
+        } else {
+            userAvatarEl.textContent = (user.displayName?.[0] || user.email?.[0] || "?").toUpperCase();
+        }
+    }
+
+    // Загружаем Custom Status и Настройки
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if(userDoc.exists()) {
+        const data = userDoc.data();
+        if(data.settings) {
+            userSettings = { ...userSettings, ...data.settings };
+        }
+        if(userStatusEl) {
+            userStatusEl.textContent = data.customStatus || "Установить статус";
+        }
+    }
+
+    // Загружаем списки
+    await loadFriends();
+    await loadPending();
+
+    if (Notification && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    // Обновление онлайна
+    await setUserOnline(true);
+    
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'visible') {
+            setUserOnline(true);
+        } else {
+            setUserOnline(false);
+        }
+    });
+
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            setUserOnline(true);
+        }
+    }, 120000);
+    
+    window.addEventListener("beforeunload", () => setUserOnline(false));
+    
+    // Поиск контактов
+    const searchInput = document.getElementById("contactSearch");
+    if(searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            const val = e.target.value.toLowerCase();
+            document.querySelectorAll("#friendsList li").forEach(li => {
+                const name = li.querySelector(".name-tag")?.textContent.toLowerCase() || "";
+                if(name.includes(val)) li.style.display = "flex";
+                else li.style.display = "none";
+            });
+        });
+    }
+
+    // Обработчик Enter для чата
+    const chatInput = document.getElementById("chatInput");
+    const charCounter = document.getElementById("charCounter");
+    if(chatInput) {
+        chatInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                window.sendMessage();
+            }
+        });
+        chatInput.addEventListener('input', (e) => {
+            handleTyping();
+            const len = chatInput.value.length;
+            const limit = 250;
+            
+            if (len > limit) {
+                chatInput.value = chatInput.value.substring(0, limit);
+            }
+            
+            if (len > 150 && charCounter) {
+                charCounter.style.opacity = "1";
+                charCounter.textContent = `${limit - chatInput.value.length}`;
+                if (limit - chatInput.value.length < 20) {
+                    charCounter.style.color = "#ff7675";
+                } else {
+                    charCounter.style.color = "var(--accent)";
+                }
+            } else if (charCounter) {
+                charCounter.style.opacity = "0";
+            }
+        });
+    }
+
+    // Закрытие контекстного меню
+    document.addEventListener('click', (e) => {
+        if(!e.target.closest('.message') && !e.target.closest('#messageContextMenu')) {
+            const mMenu = document.getElementById('messageContextMenu');
+            if(mMenu) mMenu.style.display = 'none';
+        }
+        if(!e.target.closest('#friendContextMenu')) {
+            const fMenu = document.getElementById('friendContextMenu');
+            if(fMenu) fMenu.style.display = 'none';
+        }
+    });
+  } catch(err) {
+    console.error("Init error:", err);
+    showToast("Ошибка инициализации: " + err.message, "error");
   }
-
-  // Загружаем Custom Status и Настройки
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-  if(userDoc.exists()) {
-      const data = userDoc.data();
-      if(data.settings) {
-          userSettings = { ...userSettings, ...data.settings };
-      }
-      if(userStatusEl) {
-          if(data.customStatus) {
-              userStatusEl.textContent = data.customStatus;
-          } else {
-              userStatusEl.textContent = "Установить статус";
-          }
-      }
-  }
-
-  // Загружаем списки
-  loadFriends();
-  loadPending();
-
-  if (Notification && Notification.permission === "default") {
-      Notification.requestPermission();
-  }
-
-  // Обновление онлайна
-  await setUserOnline(true);
-  
-  document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === 'visible') {
-          setUserOnline(true);
-      } else {
-          setUserOnline(false);
-      }
-  });
-
-  setInterval(() => {
-      if (document.visibilityState === 'visible') {
-          setUserOnline(true);
-      }
-  }, 120000);
-  
-  window.addEventListener("beforeunload", () => setUserOnline(false));
-  
-  // Добавляем логику поиска контактов
-  const searchInput = document.getElementById("contactSearch");
-  if(searchInput) {
-      searchInput.addEventListener("input", (e) => {
-          const val = e.target.value.toLowerCase();
-          document.querySelectorAll("#friendsList li").forEach(li => {
-              const name = li.querySelector(".name-tag").textContent.toLowerCase();
-              if(name.includes(val)) li.style.display = "flex";
-              else li.style.display = "none";
-          });
-      });
-  }
-
-  // Добавляем обработчик Enter для чата
-  const chatInput = document.getElementById("chatInput");
-  const charCounter = document.getElementById("charCounter");
-  if(chatInput) {
-      chatInput.addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') {
-              window.sendMessage();
-          }
-      });
-      // Обработка статуса "печатает" + лимит символов
-      chatInput.addEventListener('input', (e) => {
-          handleTyping();
-          const len = chatInput.value.length;
-          const limit = 250;
-          
-          if (len > limit) {
-              chatInput.value = chatInput.value.substring(0, limit);
-          }
-          
-          if (len > 150) {
-              charCounter.style.opacity = "1";
-              charCounter.textContent = `${limit - chatInput.value.length}`;
-              if (limit - chatInput.value.length < 20) {
-                  charCounter.style.color = "#ff7675";
-              } else {
-                  charCounter.style.color = "var(--accent)";
-              }
-          } else {
-              charCounter.style.opacity = "0";
-          }
-      });
-  }
-
-  // Закрытие контекстного меню при клике в любое место
-  document.addEventListener('click', (e) => {
-      if(!e.target.closest('.message') && !e.target.closest('#messageContextMenu')) {
-          const mMenu = document.getElementById('messageContextMenu');
-          if(mMenu) mMenu.style.display = 'none';
-      }
-      if(!e.target.closest('#friendContextMenu')) {
-          const fMenu = document.getElementById('friendContextMenu');
-          if(fMenu) fMenu.style.display = 'none';
-      }
-  });
 });
 
 async function setUserOnline(isOnline) {
@@ -344,45 +354,54 @@ async function setUserOnline(isOnline) {
 }
 
 // ========== Загрузка друзей и запросов ==========
-// activeTypingListeners is now at the top of the file
-
 async function loadFriends() {
   if (!currentUser) return;
   const userRef = doc(db, "users", currentUser.uid);
+  
+  if (unsubscribeFriends) unsubscribeFriends();
   
   unsubscribeFriends = onSnapshot(userRef, async (snap) => {
     const data = snap.data();
     if (!data) return;
     const friendsUids = data.friends || [];
     const friendsList = document.getElementById("friendsList");
+    if (!friendsList) return;
     
-    // Include current chat if it's not in friends (support for messaging non-friends)
     let displayUids = [...friendsUids];
     if (currentChatUid && !displayUids.includes(currentChatUid)) {
         displayUids.unshift(currentChatUid);
     }
     
-    document.getElementById("statFriends").textContent = friendsUids.length;
-    document.getElementById("contactsCount").textContent = friendsUids.length;
+    const statFriends = document.getElementById("statFriends");
+    const contactsCount = document.getElementById("contactsCount");
+    if (statFriends) statFriends.textContent = friendsUids.length;
+    if (contactsCount) contactsCount.textContent = friendsUids.length;
 
     if (displayUids.length === 0) {
         friendsList.innerHTML = `<li style="pointer-events:none; opacity:0.5; font-size:0.85em; display:flex; justify-content:center;">У вас пока нет контактов</li>`;
         return;
     }
     
-    // Fetch all display uids data in parallel
-    const contactDataList = await Promise.all(
-        displayUids.map(async (uid) => {
+    // Параллельная загрузка с обработкой ошибок
+    const contactDataList = [];
+    for (const uid of displayUids) {
+        try {
             const fSnap = await getDoc(doc(db, "users", uid));
-            return fSnap.exists() ? { uid, ...fSnap.data() } : { uid, nick: "Неизвестный" };
-        })
-    );
+            if (fSnap.exists()) {
+                contactDataList.push({ uid, ...fSnap.data() });
+            } else {
+                contactDataList.push({ uid, nick: "Неизвестный" });
+            }
+        } catch(e) {
+            console.warn("Failed to load user", uid, e);
+            contactDataList.push({ uid, nick: "Ошибка загрузки" });
+        }
+    }
 
-    // Clear and build the list once ready
     friendsList.innerHTML = "";
     let onlineCount = 0;
 
-    contactDataList.forEach((friend) => {
+    for (const friend of contactDataList) {
       if (friend.online && friendsUids.includes(friend.uid)) onlineCount++;
       const friendUid = friend.uid;
 
@@ -413,12 +432,12 @@ async function loadFriends() {
         : `${(friend.nick?.[0] || "?").toUpperCase()}`;
 
       const statusClass = friend.online ? "online-indicator" : "offline-indicator";
-      const customStatus = friend.customStatus ? `<div style="font-size:0.7rem; color:var(--text-muted);">${friend.customStatus}</div>` : '';
+      const customStatus = friend.customStatus ? `<div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(friend.customStatus)}</div>` : '';
       
       li.innerHTML = `
         <div class="avatar">${avatarContent}</div>
         <div style="flex:1;">
-            <div class="name-tag" style="font-weight: 500;">${friend.nick || friendUid}</div>
+            <div class="name-tag" style="font-weight: 500;">${escapeHtml(friend.nick || friendUid)}</div>
             <div class="friend-subtext">${friend.online ? 'в сети' : 'был(а) недавно'}</div>
             ${customStatus}
         </div>
@@ -426,33 +445,37 @@ async function loadFriends() {
       `;
       friendsList.appendChild(li);
 
-      // Listen for typing if not already listening
-      const chatId = [currentUser.uid, friendUid].sort().join("_");
-      // Clean up old listener if any (actually snapshots handle themselves but for safety)
+      // Слушатель печатания
       if (activeTypingListeners[friendUid]) activeTypingListeners[friendUid]();
-
+      const chatId = [currentUser.uid, friendUid].sort().join("_");
       activeTypingListeners[friendUid] = onSnapshot(doc(db, "privateMessages", chatId), (chatSnap) => {
           const chatMeta = chatSnap.data();
           const targetLi = document.querySelector(`#friendsList li[data-uid="${friendUid}"]`);
           if(!targetLi) return;
           const subtext = targetLi.querySelector('.friend-subtext');
           if (chatMeta && chatMeta.typing && chatMeta.typing[friendUid]) {
-              subtext.innerHTML = '<span class="typing-status">печатает...</span>';
-              subtext.style.color = 'var(--accent-light)';
+              if (subtext) {
+                  subtext.innerHTML = '<span class="typing-status">печатает...</span>';
+                  subtext.style.color = 'var(--accent-light)';
+              }
           } else {
-              subtext.innerHTML = friend.online ? 'в сети' : 'был(а) недавно';
-              subtext.style.color = 'var(--text-muted)';
+              if (subtext) {
+                  subtext.innerHTML = friend.online ? 'в сети' : 'был(а) недавно';
+                  subtext.style.color = 'var(--text-muted)';
+              }
           }
       });
-    });
+    }
     
-    document.getElementById("statOnline").textContent = onlineCount;
+    const statOnline = document.getElementById("statOnline");
+    if (statOnline) statOnline.textContent = onlineCount;
   });
 }
 
-function loadPending() {
+async function loadPending() {
   if (!currentUser) return;
   const userRef = doc(db, "users", currentUser.uid);
+  if (unsubscribePending) unsubscribePending();
   unsubscribePending = onSnapshot(userRef, (snap) => {
     const data = snap.data();
     if (!data) return;
@@ -470,21 +493,23 @@ function loadPending() {
     }
 
     pendingUids.forEach(async (uid) => {
-      const userSnap = await getDoc(doc(db, "users", uid));
-      if (!userSnap.exists()) return;
-      const userData = userSnap.data();
-      const li = document.createElement("li");
-      li.style.display = "flex";
-      li.style.justifyContent = "space-between";
-      li.style.alignItems = "center";
-      li.style.cursor = "default";
-      li.style.background = "rgba(255,255,255,0.05)";
+      try {
+        const userSnap = await getDoc(doc(db, "users", uid));
+        if (!userSnap.exists()) return;
+        const userData = userSnap.data();
+        const li = document.createElement("li");
+        li.style.display = "flex";
+        li.style.justifyContent = "space-between";
+        li.style.alignItems = "center";
+        li.style.cursor = "default";
+        li.style.background = "rgba(255,255,255,0.05)";
 
-      li.innerHTML = `
-        <span style="font-size:0.9em;">${userData.nick || uid}</span>
-        <button onclick="acceptFriendRequest('${uid}')" class="btn-small" style="background:var(--accent); color:white; border:none; cursor:pointer;" title="Принять">Принять</button>
-      `;
-      pendingList.appendChild(li);
+        li.innerHTML = `
+          <span style="font-size:0.9em;">${escapeHtml(userData.nick || uid)}</span>
+          <button onclick="acceptFriendRequest('${uid}')" class="btn-small" style="background:var(--accent); color:white; border:none; cursor:pointer;" title="Принять">Принять</button>
+        `;
+        if(pendingList) pendingList.appendChild(li);
+      } catch(e) { console.warn(e); }
     });
   });
 }
@@ -515,14 +540,11 @@ window.acceptFriendRequest = async (friendUid) => {
 };
 
 // ========== Открыть чат ==========
-
-// ========== Открыть чат ==========
 window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnline, friendCustomStatus) {
   document.querySelectorAll("#friendsList li").forEach(el => el.classList.remove("active"));
   const friendLi = document.querySelector(`#friendsList li[data-uid="${friendUid}"]`);
   if (friendLi) friendLi.classList.add("active");
   
-  // Mobile: Switch to chat view
   document.body.classList.add("show-chat");
 
   currentChatUid = friendUid;
@@ -534,23 +556,29 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
   const headerName = document.getElementById("chatHeaderName");
   const headerStatus = document.getElementById("chatHeaderStatus");
   
-  if(friendPhoto) {
-      headerAvatar.innerHTML = `<img src="${friendPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
-  } else {
-      headerAvatar.innerHTML = (friendNick?.[0] || "?").toUpperCase();
+  if(headerAvatar) {
+      if(friendPhoto) {
+          headerAvatar.innerHTML = `<img src="${friendPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">`;
+      } else {
+          headerAvatar.innerHTML = (friendNick?.[0] || "?").toUpperCase();
+      }
   }
   
-  headerName.textContent = friendNick || friendUid;
+  if(headerName) headerName.textContent = friendNick || friendUid;
   let statusText = friendOnline ? "в сети" : "был(а) недавно";
   if(friendCustomStatus) statusText += ` • ${friendCustomStatus}`;
-  headerStatus.textContent = statusText;
+  if(headerStatus) headerStatus.textContent = statusText;
   
-  document.getElementById("chatHeader").style.display = "flex";
-  document.getElementById("messageInputArea").style.display = "flex";
+  const chatHeader = document.getElementById("chatHeader");
+  const messageInputArea = document.getElementById("messageInputArea");
+  if(chatHeader) chatHeader.style.display = "flex";
+  if(messageInputArea) messageInputArea.style.display = "flex";
   
   const chatInput = document.getElementById("chatInput");
-  chatInput.value = "";
-  chatInput.focus();
+  if(chatInput) {
+      chatInput.value = "";
+      chatInput.focus();
+  }
 
   if (unsubscribeChat) unsubscribeChat();
   if (unsubscribeTyping) unsubscribeTyping();
@@ -561,6 +589,7 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
 
   unsubscribeChat = onSnapshot(q, (snapshot) => {
     const chatBox = document.getElementById("chatBox");
+    if (!chatBox) return;
     
     if (snapshot.empty) {
         chatBox.innerHTML = `
@@ -625,41 +654,38 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
       const data = snap.data();
       const indicator = document.getElementById("typingIndicatorContainer");
       if (data && data.typing && data.typing[friendUid]) {
-          indicator.style.display = "block";
+          if(indicator) indicator.style.display = "block";
           const chatBox = document.getElementById("chatBox");
-          chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
+          if(chatBox) chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
       } else {
-          indicator.style.display = "none";
+          if(indicator) indicator.style.display = "none";
       }
   });
 };
 
 window.closeChat = () => {
     document.body.classList.remove("show-chat");
-    // Optionally deselect friend in list for mobile
     document.querySelectorAll("#friendsList li").forEach(el => el.classList.remove("active"));
 };
 
 function showContextMenu(e, msgId, isOutgoing, msgText) {
     contextMenuTargetMsgId = {id: msgId, text: msgText, isOutgoing};
     const menu = document.getElementById("messageContextMenu");
+    if(!menu) return;
     
-    // Настраиваем видимость кнопки удаления и изменения (Только свои сообщения)
     const delBtn = document.getElementById('menuDelete');
     const editBtn = document.getElementById('menuEdit');
     if(!isOutgoing) {
-        delBtn.style.display = 'none';
+        if(delBtn) delBtn.style.display = 'none';
         if(editBtn) editBtn.style.display = 'none';
     } else {
-        delBtn.style.display = 'block';
+        if(delBtn) delBtn.style.display = 'block';
         if(editBtn) editBtn.style.display = 'block';
-        // Hide edit for media
         if(editBtn && !msgText) editBtn.style.display = 'none';
     }
 
     menu.style.display = "block";
     
-    // Позиционируем
     let x = e.pageX;
     let y = e.pageY;
     if(x + menu.offsetWidth > window.innerWidth) x = window.innerWidth - menu.offsetWidth - 10;
@@ -679,24 +705,27 @@ window.triggerReply = () => {
         container.id = 'replyingToBanner';
         container.className = 'replying-to-banner';
         const inputArea = document.getElementById('messageInputArea');
-        inputArea.parentNode.insertBefore(container, inputArea);
+        if(inputArea && inputArea.parentNode) inputArea.parentNode.insertBefore(container, inputArea);
     }
     
     container.innerHTML = `
         <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:middle;"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg>
-            Ответ: <span style="color:var(--text);">${replyToMsgId.text.substring(0,30)}${replyToMsgId.text.length>30?'...':''}</span>
+            Ответ: <span style="color:var(--text);">${escapeHtml(replyToMsgId.text.substring(0,30))}${replyToMsgId.text.length>30?'...':''}</span>
         </div>
         <div class="cancel" onclick="cancelReply()">&times;</div>
     `;
     
-    document.getElementById('messageContextMenu').style.display = 'none';
-    document.getElementById('chatInput').focus();
+    const menu = document.getElementById('messageContextMenu');
+    if(menu) menu.style.display = 'none';
+    const chatInput = document.getElementById('chatInput');
+    if(chatInput) chatInput.focus();
 };
 
 window.triggerEditMessage = () => {
     if(!contextMenuTargetMsgId) return;
-    document.getElementById('messageContextMenu').style.display = 'none';
+    const menu = document.getElementById('messageContextMenu');
+    if(menu) menu.style.display = 'none';
     editingMsgId = contextMenuTargetMsgId.id;
     const input = document.getElementById("chatInput");
     
@@ -708,19 +737,21 @@ window.triggerEditMessage = () => {
         container.id = 'replyingToBanner';
         container.className = 'replying-to-banner';
         const inputArea = document.getElementById('messageInputArea');
-        inputArea.parentNode.insertBefore(container, inputArea);
+        if(inputArea && inputArea.parentNode) inputArea.parentNode.insertBefore(container, inputArea);
     }
     
     container.innerHTML = `
         <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:middle;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-            Редактирование: <span style="color:var(--text);">${contextMenuTargetMsgId.text.substring(0,30)}...</span>
+            Редактирование: <span style="color:var(--text);">${escapeHtml(contextMenuTargetMsgId.text.substring(0,30))}...</span>
         </div>
         <div class="cancel" onclick="cancelEdit()">&times;</div>
     `;
     
-    input.value = contextMenuTargetMsgId.text.replace(/<br>/g, "\n");
-    input.focus();
+    if(input) {
+        input.value = contextMenuTargetMsgId.text.replace(/<br>/g, "\n");
+        input.focus();
+    }
 };
 
 window.cancelEdit = () => {
@@ -728,7 +759,8 @@ window.cancelEdit = () => {
     editingMsgId = null;
     const banner = document.getElementById('replyingToBanner');
     if(banner) banner.remove();
-    document.getElementById("chatInput").value = "";
+    const input = document.getElementById("chatInput");
+    if(input) input.value = "";
 }
 
 window.cancelReply = () => {
@@ -739,7 +771,8 @@ window.cancelReply = () => {
 
 window.triggerDelete = async () => {
     if(!contextMenuTargetMsgId || !currentChatUid || !currentUser) return;
-    document.getElementById('messageContextMenu').style.display = 'none';
+    const menu = document.getElementById('messageContextMenu');
+    if(menu) menu.style.display = 'none';
     
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
     try {
@@ -752,7 +785,8 @@ window.triggerDelete = async () => {
 
 window.triggerDeleteFriend = async () => {
     if(!contextMenuTargetFriendUid || !currentUser) return;
-    document.getElementById('friendContextMenu').style.display = 'none';
+    const menu = document.getElementById('friendContextMenu');
+    if(menu) menu.style.display = 'none';
     const fUid = contextMenuTargetFriendUid;
     
     try {
@@ -765,14 +799,19 @@ window.triggerDeleteFriend = async () => {
         showToast("Контакт удален");
         
         if (currentChatUid === fUid) {
-            document.getElementById("chatHeader").style.display = "none";
-            document.getElementById("messageInputArea").style.display = "none";
-            document.getElementById("chatBox").innerHTML = `
-                <div class="empty-chat no-contacts-yet">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <h2>Выберите контакт</h2>
-                </div>
-            `;
+            const chatHeader = document.getElementById("chatHeader");
+            const messageInputArea = document.getElementById("messageInputArea");
+            const chatBox = document.getElementById("chatBox");
+            if(chatHeader) chatHeader.style.display = "none";
+            if(messageInputArea) messageInputArea.style.display = "none";
+            if(chatBox) {
+                chatBox.innerHTML = `
+                    <div class="empty-chat no-contacts-yet">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <h2>Выберите контакт</h2>
+                    </div>
+                `;
+            }
             currentChatUid = null;
         }
     } catch(e) {
@@ -786,26 +825,32 @@ async function handleTyping() {
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
     const chatMetaRef = doc(db, "privateMessages", chatId);
     
-    await setDoc(chatMetaRef, { typing: { [currentUser.uid]: true } }, { merge: true });
+    try {
+        await setDoc(chatMetaRef, { typing: { [currentUser.uid]: true } }, { merge: true });
+    } catch(e) { console.warn(e); }
     
     if (typingTimeout) clearTimeout(typingTimeout);
     
     typingTimeout = setTimeout(async () => {
-        await setDoc(chatMetaRef, { typing: { [currentUser.uid]: false } }, { merge: true });
+        try {
+            await setDoc(chatMetaRef, { typing: { [currentUser.uid]: false } }, { merge: true });
+        } catch(e) {}
     }, 2000);
 }
 
 // ========== Chat Header Tools ==========
 window.toggleChatSearch = () => {
     const box = document.getElementById("chatSearchBox");
-    const input = document.getElementById("chatSearchInput");
+    if(!box) return;
     if(box.style.display === "none") {
         box.style.display = "block";
-        input.value = "";
-        input.focus();
+        const input = document.getElementById("chatSearchInput");
+        if(input) {
+            input.value = "";
+            input.focus();
+        }
     } else {
         box.style.display = "none";
-        // Reset search
         document.querySelectorAll("#chatBox .message").forEach(msg => {
             msg.style.display = "block";
         });
@@ -814,7 +859,7 @@ window.toggleChatSearch = () => {
 
 window.showChatInfo = () => {
     if(!currentChatUid) return;
-    const name = document.getElementById("chatHeaderName").textContent;
+    const name = document.getElementById("chatHeaderName")?.textContent;
     showToast(`Чат с: ${name}\nUID: ${currentChatUid}`, "info");
 };
 
@@ -823,7 +868,6 @@ if(chatSearchInput) {
     chatSearchInput.addEventListener("input", (e) => {
         const val = e.target.value.toLowerCase();
         document.querySelectorAll("#chatBox .message").forEach(msg => {
-            // Find text content inside message but ignore time/buttons
             let text = msg.textContent.replace(msg.querySelector('.timestamp')?.textContent || "", "");
             if(text.toLowerCase().includes(val)) {
                 msg.style.display = "block";
@@ -837,15 +881,16 @@ if(chatSearchInput) {
 // ========== Отправка текстового сообщения ==========
 window.sendMessage = async () => {
   const input = document.getElementById("chatInput");
-  const text = input.value.trim();
+  const text = input?.value.trim();
   if (!text || !currentChatUid || !currentUser) return;
   
   const sendBtn = document.getElementById("sendBtn");
-  sendBtn.style.opacity = "0.5";
-  sendBtn.style.pointerEvents = "none";
+  if(sendBtn) {
+      sendBtn.style.opacity = "0.5";
+      sendBtn.style.pointerEvents = "none";
+  }
 
   try {
-      // Check privacy settings
       if (!editingMsgId) {
           const recipientDoc = await getDoc(doc(db, "users", currentChatUid));
           if (recipientDoc.exists()) {
@@ -853,8 +898,6 @@ window.sendMessage = async () => {
               if (rData.settings && rData.settings.friendsOnly) {
                   if (!rData.friends || !rData.friends.includes(currentUser.uid)) {
                       showToast("Пользователь принимает сообщения только от друзей", "error");
-                      sendBtn.style.opacity = "1";
-                      sendBtn.style.pointerEvents = "all";
                       return;
                   }
               }
@@ -888,14 +931,13 @@ window.sendMessage = async () => {
           await addDoc(collection(db, "privateMessages", chatId, "messages"), msgData);
       }
       
-      input.value = "";
+      if(input) input.value = "";
       const charCounter = document.getElementById("charCounter");
       if (charCounter) charCounter.style.opacity = "0";
       
       const chatBox = document.getElementById("chatBox");
-      chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
+      if(chatBox) chatBox.scrollTo({top: chatBox.scrollHeight, behavior: 'smooth'});
 
-      // Effects triggers
       const lower = text.toLowerCase();
       if(lower.includes("ура") || lower.includes("поздравляю") || lower.includes("party") || lower.includes("супер")) {
           window.triggerConfetti();
@@ -906,9 +948,11 @@ window.sendMessage = async () => {
   } catch(e) {
       showToast("Ошибка при отправке", "error");
   } finally {
-      sendBtn.style.opacity = "1";
-      sendBtn.style.pointerEvents = "all";
-      input.focus();
+      if(sendBtn) {
+          sendBtn.style.opacity = "1";
+          sendBtn.style.pointerEvents = "all";
+      }
+      if(input) input.focus();
   }
 };
 
@@ -956,7 +1000,6 @@ if(voiceBtn) {
             isRecording = true;
             voiceBtn.classList.add("recording");
             
-            // Limit to 15 seconds
             recordingTimeout = setTimeout(() => {
                 if(isRecording) stopRecording();
             }, 15000);
@@ -972,9 +1015,7 @@ if(voiceBtn) {
             isRecording = false;
             voiceBtn.classList.remove("recording");
             if(recordingTimeout) clearTimeout(recordingTimeout);
-            
-            // Stop mic completely
-            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+            if(mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
         }
     };
 
@@ -989,61 +1030,71 @@ if(voiceBtn) {
 // ========== Настройки (Профиль) ==========
 window.openSettingsModal = async () => {
   if (!currentUser) return;
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-  if (userSnap.exists()) {
-    const data = userSnap.data();
-    document.getElementById("profileUid").textContent = data.uid || currentUser.uid;
-    document.getElementById("profileEmail").textContent = data.email || currentUser.email;
-    document.getElementById("profileNick").textContent = data.nick || currentUser.displayName;
-    document.getElementById("profileCustomStatus").textContent = data.customStatus || "Статус не установлен";
-    
-    // Предзаполнение инпутов
-    document.getElementById("newNick").value = data.nick || currentUser.displayName || "";
-    document.getElementById("newStatus").value = data.customStatus || "";
-    document.getElementById("newPhoto").value = data.photoURL || "";
-    
-    const imgEl = document.getElementById("profileAvatarImg");
-    const textEl = document.getElementById("profileAvatarText");
-    if(data.photoURL) {
-        imgEl.src = data.photoURL;
-        imgEl.style.display = "block";
-        textEl.style.display = "none";
-    } else {
-        imgEl.style.display = "none";
-        textEl.style.display = "block";
-        textEl.textContent = (data.nick?.[0] || "?").toUpperCase();
+  try {
+    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      const profileUid = document.getElementById("profileUid");
+      const profileEmail = document.getElementById("profileEmail");
+      const profileNick = document.getElementById("profileNick");
+      const profileCustomStatus = document.getElementById("profileCustomStatus");
+      if(profileUid) profileUid.textContent = data.uid || currentUser.uid;
+      if(profileEmail) profileEmail.textContent = data.email || currentUser.email;
+      if(profileNick) profileNick.textContent = data.nick || currentUser.displayName;
+      if(profileCustomStatus) profileCustomStatus.textContent = data.customStatus || "Статус не установлен";
+      
+      const newNickInput = document.getElementById("newNick");
+      const newStatusInput = document.getElementById("newStatus");
+      const newPhotoInput = document.getElementById("newPhoto");
+      if(newNickInput) newNickInput.value = data.nick || currentUser.displayName || "";
+      if(newStatusInput) newStatusInput.value = data.customStatus || "";
+      if(newPhotoInput) newPhotoInput.value = data.photoURL || "";
+      
+      const imgEl = document.getElementById("profileAvatarImg");
+      const textEl = document.getElementById("profileAvatarText");
+      if(data.photoURL && imgEl && textEl) {
+          imgEl.src = data.photoURL;
+          imgEl.style.display = "block";
+          textEl.style.display = "none";
+      } else if(textEl && imgEl) {
+          imgEl.style.display = "none";
+          textEl.style.display = "block";
+          textEl.textContent = (data.nick?.[0] || "?").toUpperCase();
+      }
+      
+      if(data.settings) {
+          userSettings = { ...userSettings, ...data.settings };
+      }
+      const hideOnlineCheck = document.getElementById("settingHideOnline");
+      const friendsOnlyCheck = document.getElementById("settingFriendsOnly");
+      const soundCheck = document.getElementById("settingSound");
+      if(hideOnlineCheck) hideOnlineCheck.checked = userSettings.hideOnline;
+      if(friendsOnlyCheck) friendsOnlyCheck.checked = userSettings.friendsOnly;
+      if(soundCheck) soundCheck.checked = userSettings.sound;
     }
-    
-    if(data.settings) {
-        userSettings = { ...userSettings, ...data.settings };
-    }
-    document.getElementById("settingHideOnline").checked = userSettings.hideOnline;
-    document.getElementById("settingFriendsOnly").checked = userSettings.friendsOnly;
-    document.getElementById("settingSound").checked = userSettings.sound;
-  }
-  document.getElementById("settingsModal").style.display = "flex";
+    const settingsModal = document.getElementById("settingsModal");
+    if(settingsModal) settingsModal.style.display = "flex";
+  } catch(e) { showToast("Ошибка загрузки настроек", "error"); }
 };
 
 window.closeSettingsModal = () => {
-  document.getElementById("settingsModal").style.display = "none";
+  const modal = document.getElementById("settingsModal");
+  if(modal) modal.style.display = "none";
 };
 
 window.switchSettingsTab = (tabName) => {
-    // Hide all tabs
     document.querySelectorAll(".settings-tab").forEach(tab => {
         tab.style.display = "none";
     });
-    // Show selected tab
-    document.getElementById(`tab-${tabName}`).style.display = "block";
+    const targetTab = document.getElementById(`tab-${tabName}`);
+    if(targetTab) targetTab.style.display = "block";
     
-    // Update active class in sidebar
     document.querySelectorAll(".settings-sidebar li").forEach(li => {
         li.classList.remove("active");
     });
     const activeLi = document.querySelector(`.settings-sidebar li[onclick*="${tabName}"]`);
     if(activeLi) activeLi.classList.add("active");
 
-    // Update mobile title
     const titles = {
         'account': 'Учетная запись',
         'appearance': 'Внешний вид',
@@ -1055,13 +1106,13 @@ window.switchSettingsTab = (tabName) => {
 };
 
 window.updateProfileData = async () => {
-  const newNick = document.getElementById("newNick").value.trim();
-  const newStatus = document.getElementById("newStatus").value.trim();
-  const newPhoto = document.getElementById("newPhoto").value.trim();
+  const newNick = document.getElementById("newNick")?.value.trim();
+  const newStatus = document.getElementById("newStatus")?.value.trim();
+  const newPhoto = document.getElementById("newPhoto")?.value.trim();
 
   const updates = {};
   if (newNick) updates.nick = newNick;
-  if (newStatus !== undefined) updates.customStatus = newStatus; // Can clear it
+  if (newStatus !== undefined) updates.customStatus = newStatus;
   if (newPhoto !== undefined) updates.photoURL = newPhoto;
 
   try {
@@ -1109,7 +1160,8 @@ window.updateSettings = async (key, value) => {
 window.triggerReact = async (emoji) => {
     if (!contextMenuTargetMsgId || !currentChatUid || !currentUser) return;
     const msgId = contextMenuTargetMsgId.id;
-    document.getElementById('messageContextMenu').style.display = 'none';
+    const menu = document.getElementById('messageContextMenu');
+    if(menu) menu.style.display = 'none';
     await toggleReaction(msgId, emoji);
 };
 
@@ -1139,14 +1191,16 @@ window.toggleReaction = async (msgId, emoji) => {
 };
 
 window.openFriendModal = () => {
-  document.getElementById("friendModal").style.display = "block";
+  const modal = document.getElementById("friendModal");
+  if(modal) modal.style.display = "block";
 };
 window.closeFriendModal = () => {
-  document.getElementById("friendModal").style.display = "none";
+  const modal = document.getElementById("friendModal");
+  if(modal) modal.style.display = "none";
 };
 
 window.sendFriendRequest = async () => {
-  const friendUid = document.getElementById("friendUidInput").value.trim();
+  const friendUid = document.getElementById("friendUidInput")?.value.trim();
   const errorEl = document.getElementById("friendError");
   if (!friendUid) {
       if (errorEl) errorEl.textContent = "UID не может быть пустым";
@@ -1175,36 +1229,14 @@ window.sendFriendRequest = async () => {
 
       closeFriendModal();
       showToast("Запрос отправлен!", "success");
-      document.getElementById("friendUidInput").value = "";
+      const input = document.getElementById("friendUidInput");
+      if(input) input.value = "";
   } catch(e) {
       if (errorEl) errorEl.textContent = "Произошла ошибка при отправке";
   }
 };
 
 // ========== Дополнительные инструменты чата ==========
-window.toggleChatSearch = () => {
-    const box = document.getElementById("chatSearchBox");
-    if(!box) return;
-    if(box.style.display === "none") {
-        box.style.display = "block";
-        document.getElementById("chatSearchInput")?.focus();
-    } else {
-        box.style.display = "none";
-    }
-};
-
-document.getElementById("chatSearchInput")?.addEventListener("input", (e) => {
-    const val = e.target.value.toLowerCase();
-    const msgs = document.querySelectorAll("#chatBox .message");
-    msgs.forEach(m => {
-        if(m.textContent.toLowerCase().includes(val)) {
-            m.style.display = "block";
-        } else {
-            m.style.display = "none";
-        }
-    });
-});
-
 window.showChatInfo = async () => {
     if(!currentChatUid) return;
     const friendSnap = await getDoc(doc(db, "users", currentChatUid));
@@ -1247,7 +1279,7 @@ window.showChatInfo = async () => {
                 ${friend.photoURL ? `<img src="${friend.photoURL}" style="width:100%; height:100%; object-fit:cover;">` : (friend.nick?.[0] || "?").toUpperCase()}
             </div>
             <div>
-                <div style="font-weight:600; font-size:1.2rem;">${friend.nick || "Друг"}</div>
+                <div style="font-weight:600; font-size:1.2rem;">${escapeHtml(friend.nick || "Друг")}</div>
                 <div style="font-size:0.8rem; opacity:0.6;">${friend.online ? 'в сети' : 'был(а) недавно'}</div>
             </div>
         `;
@@ -1268,8 +1300,10 @@ window.setChatWallpaper = (type) => {
 window.clearChatHistory = async () => {
     if(!confirm("Вы уверены, что хотите очистить историю?")) return;
     showToast("История очищена", "info");
-    document.getElementById("chatBox").innerHTML = "";
-    document.getElementById('chatInfoModal').style.display='none';
+    const chatBox = document.getElementById("chatBox");
+    if(chatBox) chatBox.innerHTML = "";
+    const modal = document.getElementById('chatInfoModal');
+    if(modal) modal.style.display='none';
 };
 
 // ========== Выход ==========
@@ -1303,7 +1337,6 @@ window.setTheme = (theme) => {
 (function initTheme() {
     const savedTheme = localStorage.getItem('xenogram_theme') || 'violet';
     document.body.className = `app-page theme-${savedTheme}`;
-    // Wait for DOM to sync theme badges if settings open
     setTimeout(() => {
         const target = document.querySelector('.theme-color.' + savedTheme);
         if(target) target.classList.add('active');
