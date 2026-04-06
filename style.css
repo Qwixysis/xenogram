@@ -821,7 +821,7 @@ body {
 }
 
 .settings-layout {
-  display: flex !important;
+  display: flex;
   flex-direction: row; /* Desktop: side-by-side */
   padding: 0 !important;
   width: 100%;
@@ -1354,7 +1354,7 @@ input:checked + .slider:before {
   }
 
   .settings-layout {
-      display: flex !important;
+      display: flex;
       flex-direction: column; /* Mobile: stacked */
       height: 100dvh;
       overflow: hidden;
