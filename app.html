@@ -130,8 +130,16 @@
 
     <!-- Модалка Настроек (Telegram/Discord Style) -->
     <div id="settingsModal" class="modal settings-layout">
+        <div class="mobile-settings-header">
+            <button onclick="closeSettingsModal()" class="back-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <h2 id="mobileSettingsTitle">Настройки</h2>
+            <div style="width: 40px;"></div> <!-- Spacer for centering -->
+        </div>
+
         <div class="settings-sidebar">
-            <h3 style="padding: 20px; margin: 0; padding-bottom: 10px;">Настройки</h3>
+            <h3 class="desktop-only-title" style="padding: 20px; margin: 0; padding-bottom: 10px;">Настройки</h3>
             <ul>
                 <li class="active" onclick="switchSettingsTab('account')">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
