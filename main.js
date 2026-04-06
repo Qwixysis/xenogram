@@ -7,7 +7,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-// ========== Глобальные переменные ==========
 let currentUser = null;
 let currentChatUid = null;           
 let unsubscribeChat = null;
@@ -24,7 +23,6 @@ let editingMsgId = null;
 let userSettings = { hideOnline: false, friendsOnly: false, sound: true };
 let activeTypingListeners = {};
 
-// ========== Effect System (Particles) ==========
 const canvas = document.getElementById('effectsCanvas');
 const ctx = canvas?.getContext('2d');
 let particles = [];
@@ -113,13 +111,22 @@ window.triggerConfetti = (type = 'default') => {
     }
 };
 
-// ========== Emoji Check ==========
 function isOnlyEmojis(str) {
     const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
     const match = str.match(emojiRegex);
     if (!match) return false;
     const remaining = str.replace(emojiRegex, '').trim();
     return remaining.length === 0 && match.length <= 3;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
 }
 
 function renderMessageHTML(msgId, msg, isOutgoing, senderNick, senderPhoto, friendNick, friendPhoto) {
@@ -186,17 +193,6 @@ function renderMessageHTML(msgId, msg, isOutgoing, senderNick, senderPhoto, frie
     };
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-// ========== Toast Notifications ==========
 window.showToast = function(message, type = "info") {
     let container = document.getElementById("toastContainer");
     if (!container) return;
@@ -213,7 +209,6 @@ window.showToast = function(message, type = "info") {
     }, 3000);
 };
 
-// ========== Инициализация ==========
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "index.html";
@@ -222,7 +217,6 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   
   try {
-    // Инициализация UI профиля
     const userNickEl = document.getElementById("userNick");
     const userUidEl = document.getElementById("userUid");
     const userAvatarEl = document.getElementById("userAvatar");
@@ -238,7 +232,6 @@ onAuthStateChanged(auth, async (user) => {
         }
     }
 
-    // Загружаем Custom Status и Настройки
     const userDoc = await getDoc(doc(db, "users", user.uid));
     if(userDoc.exists()) {
         const data = userDoc.data();
@@ -250,7 +243,6 @@ onAuthStateChanged(auth, async (user) => {
         }
     }
 
-    // Загружаем списки
     await loadFriends();
     await loadPending();
 
@@ -258,7 +250,6 @@ onAuthStateChanged(auth, async (user) => {
         Notification.requestPermission();
     }
 
-    // Обновление онлайна
     await setUserOnline(true);
     
     document.addEventListener("visibilitychange", () => {
@@ -277,7 +268,6 @@ onAuthStateChanged(auth, async (user) => {
     
     window.addEventListener("beforeunload", () => setUserOnline(false));
     
-    // Поиск контактов
     const searchInput = document.getElementById("contactSearch");
     if(searchInput) {
         searchInput.addEventListener("input", (e) => {
@@ -290,7 +280,6 @@ onAuthStateChanged(auth, async (user) => {
         });
     }
 
-    // Обработчик Enter для чата
     const chatInput = document.getElementById("chatInput");
     const charCounter = document.getElementById("charCounter");
     if(chatInput) {
@@ -322,7 +311,6 @@ onAuthStateChanged(auth, async (user) => {
         });
     }
 
-    // Закрытие контекстного меню
     document.addEventListener('click', (e) => {
         if(!e.target.closest('.message') && !e.target.closest('#messageContextMenu')) {
             const mMenu = document.getElementById('messageContextMenu');
@@ -353,7 +341,6 @@ async function setUserOnline(isOnline) {
   }
 }
 
-// ========== Загрузка друзей и запросов ==========
 async function loadFriends() {
   if (!currentUser) return;
   const userRef = doc(db, "users", currentUser.uid);
@@ -382,7 +369,6 @@ async function loadFriends() {
         return;
     }
     
-    // Параллельная загрузка с обработкой ошибок
     const contactDataList = [];
     for (const uid of displayUids) {
         try {
@@ -445,7 +431,6 @@ async function loadFriends() {
       `;
       friendsList.appendChild(li);
 
-      // Слушатель печатания
       if (activeTypingListeners[friendUid]) activeTypingListeners[friendUid]();
       const chatId = [currentUser.uid, friendUid].sort().join("_");
       activeTypingListeners[friendUid] = onSnapshot(doc(db, "privateMessages", chatId), (chatSnap) => {
@@ -539,13 +524,15 @@ window.acceptFriendRequest = async (friendUid) => {
   }
 };
 
-// ========== Открыть чат ==========
 window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnline, friendCustomStatus) {
   document.querySelectorAll("#friendsList li").forEach(el => el.classList.remove("active"));
   const friendLi = document.querySelector(`#friendsList li[data-uid="${friendUid}"]`);
   if (friendLi) friendLi.classList.add("active");
   
   document.body.classList.add("show-chat");
+  if (window.innerWidth <= 768) {
+    document.body.classList.remove("sidebar-visible");
+  }
 
   currentChatUid = friendUid;
   replyToMsgId = null;
@@ -663,8 +650,11 @@ window.openChat = async function(friendUid, friendNick, friendPhoto, friendOnlin
   });
 };
 
-window.closeChat = () => {
+window.closeChat = function() {
     document.body.classList.remove("show-chat");
+    if (window.innerWidth <= 768) {
+        document.body.classList.remove("sidebar-visible");
+    }
     document.querySelectorAll("#friendsList li").forEach(el => el.classList.remove("active"));
 };
 
@@ -819,7 +809,6 @@ window.triggerDeleteFriend = async () => {
     }
 };
 
-// ========== Typing Logic ==========
 async function handleTyping() {
     if (!currentChatUid || !currentUser) return;
     const chatId = [currentUser.uid, currentChatUid].sort().join("_");
@@ -838,7 +827,6 @@ async function handleTyping() {
     }, 2000);
 }
 
-// ========== Chat Header Tools ==========
 window.toggleChatSearch = () => {
     const box = document.getElementById("chatSearchBox");
     if(!box) return;
@@ -878,7 +866,6 @@ if(chatSearchInput) {
     });
 }
 
-// ========== Отправка текстового сообщения ==========
 window.sendMessage = async () => {
   const input = document.getElementById("chatInput");
   const text = input?.value.trim();
@@ -956,7 +943,6 @@ window.sendMessage = async () => {
   }
 };
 
-// ========== Запись Голосовых сообщений ==========
 function blobToBase64(blob) {
   return new Promise((resolve, _) => {
     const reader = new FileReader();
@@ -1027,7 +1013,6 @@ if(voiceBtn) {
     voiceBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopRecording(); });
 }
 
-// ========== Настройки (Профиль) ==========
 window.openSettingsModal = async () => {
   if (!currentUser) return;
   try {
@@ -1236,7 +1221,6 @@ window.sendFriendRequest = async () => {
   }
 };
 
-// ========== Дополнительные инструменты чата ==========
 window.showChatInfo = async () => {
     if(!currentChatUid) return;
     const friendSnap = await getDoc(doc(db, "users", currentChatUid));
@@ -1306,7 +1290,6 @@ window.clearChatHistory = async () => {
     if(modal) modal.style.display='none';
 };
 
-// ========== Выход ==========
 window.logout = async () => {
   await setUserOnline(false);
   signOut(auth).then(() => {
@@ -1314,7 +1297,6 @@ window.logout = async () => {
   });
 };
 
-// ========== UI Utilities (Theme, Copy, etc.) ==========
 window.copyUid = () => {
     const uid = document.getElementById('profileUid')?.textContent;
     if (uid) {
@@ -1333,7 +1315,6 @@ window.setTheme = (theme) => {
     if(target) target.classList.add('active');
 };
 
-// Theme initialization
 (function initTheme() {
     const savedTheme = localStorage.getItem('xenogram_theme') || 'violet';
     document.body.className = `app-page theme-${savedTheme}`;
@@ -1342,3 +1323,21 @@ window.setTheme = (theme) => {
         if(target) target.classList.add('active');
     }, 500);
 })();
+
+// ========== МОБИЛЬНЫЙ БУРГЕР ==========
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.body.classList.toggle('sidebar-visible');
+    });
+}
+
+document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && document.body.classList.contains('sidebar-visible')) {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar && !sidebar.contains(e.target) && !mobileMenuBtn?.contains(e.target)) {
+            document.body.classList.remove('sidebar-visible');
+        }
+    }
+});
