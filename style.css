@@ -1514,3 +1514,4 @@ input:checked + .slider:before {
   button, li, .reaction-badge {
     touch-action: manipulation;
   }
+} /* Closing media query */
